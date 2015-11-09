@@ -73,3 +73,13 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+*.suo
+bin/
+Debug/
+Release/
+obj/
+addons.make
+*.aps
+icon.rc
+*.opensdf
+voxel.sdf

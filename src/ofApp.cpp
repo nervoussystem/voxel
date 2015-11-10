@@ -139,7 +139,7 @@ void ofApp::dragEvent(ofDragInfo info) {
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
 	if (key == 's') {
-		grid.mesh.save(ofToDataPath("test.ply"));
+		grids.front()->mesh.save("solid.ply");
 	}
 	else if (key == 'e') {
 		grid.toEmber("cats");

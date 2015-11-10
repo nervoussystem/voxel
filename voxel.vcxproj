@@ -114,7 +114,7 @@
       <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
-      <AdditionalIncludeDirectories>C:\dev\tbb44_20150728oss\include;C:\dev\zlib-1.2.5;C:\dev\ilmbase-2.2.0\Half;C:\dev\boost_1_59_0;C:\dev\openvdb;%(AdditionalIncludeDirectories);src;..\..\..\addons\ofxGui\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\dev\tbb44_20150728oss\include;C:\dev\zlib-1.2.5;C:\dev\ilmbase-2.2.0\Half;C:\dev\boost_1_59_0;C:\dev;%(AdditionalIncludeDirectories);src;..\..\..\addons\ofxGui\src</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
@@ -157,7 +157,7 @@
       <PreprocessorDefinitions>%(PreprocessorDefinitions);OPENVDB_STATICLIB</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
-      <AdditionalIncludeDirectories>C:\dev\tbb44_20150728oss\include;C:\dev\zlib-1.2.5;C:\dev\ilmbase-2.2.0\Half;C:\dev\boost_1_59_0;C:\dev\openvdb;%(AdditionalIncludeDirectories);src;..\..\..\addons\ofxGui\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\dev\tbb44_20150728oss\include;C:\dev\zlib-1.2.5;C:\dev\ilmbase-2.2.0\Half;C:\dev\boost_1_59_0;C:\dev;%(AdditionalIncludeDirectories);src;..\..\..\addons\ofxGui\src</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>

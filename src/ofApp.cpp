@@ -11,7 +11,7 @@ void ofApp::setup(){
 int step = 200;
 string folder = "C:\\Users\\nervous system\\of_v0.8.0_vs_release\\apps\\myApps\\3DVoronoi\\bin\\data\\opt2\\lines\\SLAB_sz9.5_b10_";
 //--------------------------------------------------------------
-void ofApp::update(){
+void ofApp::update() {
 	if (step < 150) {
 		int frame = (int) (0.5*.86*pow(step,1.5)+1);
 		loadLines(folder + to_string(frame) + ".csv");
@@ -30,20 +30,28 @@ void ofApp::draw(){
 	ofLight light0;
 	light0.enable();
 	ofSetColor(100);
-	grid.draw();
-	ofVec2f mousePt(ofGetMouseX(), ofGetMouseY());
-	ofVec3f sPt = cam.screenToWorld(ofVec3f(mousePt.x,mousePt.y, -.9)) ;
-	ofVec3f sPt2 = cam.screenToWorld(ofVec3f(mousePt.x, mousePt.y,.9)) ;
-	ofVec3f srfPt;
-	if (grid.intersectRay(sPt, (sPt2 - sPt), srfPt)) {
-		cout << sPt << " : " << sPt2 << " : " << srfPt << endl;
-		ofPushMatrix();
-		ofTranslate(srfPt);
-		ofSphere(2);
-		ofPopMatrix();
+	for (auto g : grids) {
+		if (isSelected(g)) {
+			ofSetColor(200, 0, 0);
+		}
+		else {
+			ofSetColor(120);
+		}
+		g->draw();
 	}
-	grid.isUpdated = false;
 	cam.end();
+}
+
+bool ofApp::isSelected(VDB::Ptr g) {
+	return find(selected.begin(), selected.end(), g) != selected.end();
+}
+
+void ofApp::doDelete() {
+	for (auto sel : selected) {
+		auto it = find(grids.begin(), grids.end(), sel);
+		if (it != grids.end()) grids.erase(it);
+	}
+	selected.clear();
 }
 
 void ofApp::loadLines(string filename) {
@@ -52,7 +60,7 @@ void ofApp::loadLines(string filename) {
 	float f;
 	openvdb::Vec3f v1, v2;
 	float cthick;
-	grid.clear();
+	VDB::Ptr newGrid(new VDB());
 	int count = 0;
 	while (getline(in, cLine)) {
 		stringstream ss(cLine);
@@ -85,24 +93,16 @@ void ofApp::loadLines(string filename) {
 				}
 				num++;
 			}
-			//ofVec3f dir = v2-v1;
-			//float len = dir.length();
-			//dir /= len;
-			//float offset = min(cthick*0.25, len/3.0);
-			//check total len
-			//v1 += dir*offset;
-			//v2 -= dir*offset;
-
-			//openvdb::FloatGrid::Ptr mgrid = openvdb::tools::createLevelSetCapsule<openvdb::FloatGrid>(cthick, v1,v2, 0.5);
-			//grid.doUnion(mgrid);
 			openvdb::tools::LevelSetCapsule<openvdb::FloatGrid> factory(cthick, v1, v2);
-			factory.mGrid = grid.grid;
+			factory.mGrid = newGrid->grid;
 			factory.rasterCapsule(0.5, 3);
 			cout << count++ << endl;
 		}
 	}
-	grid.isUpdated = false;
-
+	cout << "background " <<  newGrid->grid->background() << endl;
+	newGrid->floodFill();
+	newGrid->isUpdated = false;
+	grids.push_back(newGrid);
 	in.close();
 }
 
@@ -121,21 +121,15 @@ void ofApp::dragEvent(ofDragInfo info) {
 				mesh.load(info.files[i]);
 				if (mesh.getNumIndices() > 3) {
 					cout << "vertices " << mesh.getNumVertices() << endl;
-					if (ofGetKeyPressed(OF_KEY_CONTROL)) {
-						VDB temp;
-						temp.loadMesh(mesh, resolution);
-						grid.doDifference(temp);
-					}
-					else {
-						grid.loadMesh(mesh, resolution);
-						cout << "loaded mesh to voxels" << endl;
-					}
+					VDB::Ptr newGrid(new VDB(mesh, resolution));
+					cout << "background " << newGrid->grid->background() << endl;
+					grids.push_back(newGrid);
 				}
 			}
 			else if (info.files[i].substr(info.files[i].size() - 3) == "csv") {
 				loadLines(info.files[i]);
 				//grid.doDifference(subBox);
-				grid.updateMesh();
+				//grid.updateMesh();
 				//grid.mesh.save(info.files[i].substr(0,info.files[i].size() - 3) + "ply");
 			}
 		}
@@ -155,6 +149,9 @@ void ofApp::keyPressed(int key){
 	}
 	else if (key == 'o') {
 		grid.offset(-.05);
+	}
+	else if (key == OF_KEY_DEL) {
+		doDelete();
 	}
 }
 
@@ -179,7 +176,41 @@ void ofApp::mousePressed(int x, int y, int button){
 
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button){
-
+	if (button == OF_MOUSE_BUTTON_1) {
+		ofVec2f mousePt(x, y);
+		ofVec3f sPt = cam.screenToWorld(ofVec3f(mousePt.x, mousePt.y, -.9));
+		ofVec3f sPt2 = cam.screenToWorld(ofVec3f(mousePt.x, mousePt.y, .9));
+		ofVec3f srfPt;
+		float t, minT = 9e9;
+		VDB::Ptr sel = nullptr;
+		for (auto g : grids) {
+			if (g->intersectRay(sPt, (sPt2 - sPt), srfPt, t)) {
+				if (t < minT) {
+					minT = t;
+					sel = g;
+				}
+			}
+		}
+		if (ofGetKeyPressed(OF_KEY_SHIFT)) {
+			if (sel != nullptr) {
+				if (!isSelected(sel)) {
+					selected.push_back(sel);
+				}
+			}
+		}
+		else if (ofGetKeyPressed(OF_KEY_CONTROL)) {
+			if (sel != nullptr) {
+				auto it = find(selected.begin(), selected.end(), sel);
+				if (it != selected.end()) {
+					selected.erase(it);
+				}
+			}
+		}
+		else {
+			selected.clear();
+			if (sel != nullptr) selected.push_back(sel);	
+		}
+	}
 }
 
 //--------------------------------------------------------------

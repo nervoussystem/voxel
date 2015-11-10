@@ -20,9 +20,14 @@ public:
 	void doUnion(openvdb::FloatGrid::Ptr vdb);
 	void doIntersect(VDB & vdb);
 
+	void floodFill();
+
 	bool intersectRay(const float x, const float y, const float z, const float dx, const float dy, const float dz, float & ox, float &oy, float &oz);
 	bool intersectRay(const ofVec3f & pt, const ofVec3f & dir, ofVec3f & out);
+	bool intersectRay(const float x, const float y, const float z, const float dx, const float dy, const float dz, float & ox, float &oy, float &oz, float &t);
+	bool intersectRay(const ofVec3f & pt, const ofVec3f & dir, ofVec3f & out, float &t);
 	void blur();
+
 	void updateMesh();
 
 	void draw();
@@ -32,5 +37,6 @@ public:
 	ofMesh toMesh();
 
 	VDB();
+	VDB(ofMesh & m, float resolution = 1.0);
 	VDB(const VDB & vdb);
 };

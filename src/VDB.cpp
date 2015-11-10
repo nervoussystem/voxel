@@ -103,6 +103,10 @@ ofMesh VDB::toMesh() {
 	return mesh;
 }
 
+void VDB::floodFill() {
+	signedFloodFill(grid->tree());
+}
+
 void VDB::updateMesh() {
 	
 	//openvdb::tools::VolumeToMesh mesher(grid->getGridClass() == openvdb::GRID_LEVEL_SET ? 0.0 : 0.01);
@@ -168,9 +172,17 @@ void VDB::save(string filename) {
 }
 
 VDB::VDB() {
-	grid = FloatGrid::create();
+	grid = FloatGrid::create(1.2);
+	grid->setGridClass(GRID_LEVEL_SET);
 	mesh.enableNormals();
 	isUpdated = false;
+}
+
+VDB::VDB(ofMesh & m, float resolution) {
+	grid = FloatGrid::create(resolution*3);
+	mesh.enableNormals();
+	isUpdated = false;
+	loadMesh(m, resolution);
 }
 
 VDB::VDB(const VDB & vdb) {
@@ -277,4 +289,20 @@ bool VDB::intersectRay(const float x, const float y, const float z, const float 
 
 bool VDB::intersectRay(const ofVec3f & pt, const ofVec3f & dir, ofVec3f & out) {
 	return intersectRay(pt.x, pt.y, pt.z, dir.x, dir.y, dir.z, out.x, out.y, out.z);
+}
+
+bool VDB::intersectRay(const float x, const float y, const float z, const float dx, const float dy, const float dz, float & ox, float &oy, float &oz, float & t) {
+	LevelSetRayIntersector<FloatGrid> intersector(*grid);
+	Vec3R pt;
+	Real t0;
+	bool val = intersector.intersectsWS(math::Ray<Real>(Vec3R(x, y, z), Vec3R(dx, dy, dz)), pt, t0);
+	t = t0;
+	ox = pt[0];
+	oy = pt[1];
+	oz = pt[2];
+	return val;
+}
+
+bool VDB::intersectRay(const ofVec3f & pt, const ofVec3f & dir, ofVec3f & out, float &t) {
+	return intersectRay(pt.x, pt.y, pt.z, dir.x, dir.y, dir.z, out.x, out.y, out.z, t);
 }

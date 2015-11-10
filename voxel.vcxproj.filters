@@ -40,6 +40,9 @@
     <ClCompile Include="src\VDB.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\Gumball.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -93,6 +96,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\LevelSetCapsule.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Gumball.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

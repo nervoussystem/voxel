@@ -2,12 +2,13 @@
 
 #include "ofMain.h"
 #include "VDB.h"
+#include "Gumball.h"
 
 class ofApp : public ofBaseApp{
 
 	public:
 		ofEasyCam cam;
-
+		Gumball gumball;
 		VDB grid;
 
 		list<VDB::Ptr> grids;
@@ -22,6 +23,8 @@ class ofApp : public ofBaseApp{
 		bool isSelected(VDB::Ptr g);
 
 		void doDelete();
+
+		bool isMouseClick;
 		
 		void keyPressed(int key);
 		void keyReleased(int key);
@@ -31,6 +34,7 @@ class ofApp : public ofBaseApp{
 		void mouseReleased(int x, int y, int button);
 		void mouseEntered(int x, int y);
 		void mouseExited(int x, int y);
+		void gumballEvent(GumballInfo & args);
 		void dragEvent(ofDragInfo info);
 		void windowResized(int w, int h);
 		void gotMessage(ofMessage msg);

@@ -2,10 +2,11 @@
 
 #include <openvdb/openvdb.h>
 #include "ofVboMesh.h"
-
+#include "ofMatrix4x4.h"
 
 class VDB {
 public:
+	ofMatrix4x4 tempTransform;
 	typedef shared_ptr<VDB> Ptr;
 	openvdb::FloatGrid::Ptr grid;
 	ofVboMesh mesh;
@@ -30,6 +31,8 @@ public:
 
 	void updateMesh();
 
+	void transform(ofMatrix4x4 & mat);
+	pair<ofVec3f, ofVec3f> bbox();
 	void draw();
 	void save(string filename);
 	void toEmber(string filename);

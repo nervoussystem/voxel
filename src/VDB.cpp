@@ -7,7 +7,9 @@
 #include <openvdb/tools/LevelSetUtil.h>
 #include <openvdb/tools/GridTransformer.h>
 
+#include "ofMatrix4x4.h"
 #include "ofImage.h"
+#include "ofGraphics.h"
 
 using namespace openvdb;
 using namespace openvdb::tools;
@@ -157,14 +159,22 @@ void VDB::updateMesh() {
 			}
 		}
 	}
-
+	tempTransform.makeIdentityMatrix();
 	isUpdated = true;
 }
 
+void VDB::transform(ofMatrix4x4 & mat) {
+	tempTransform.postMult(mat);
+	math::Mat4d vMat(mat.getPtr());
+	grid->transform().postMult(vMat);
+}
 
 void VDB::draw() {
 	if (!isUpdated) updateMesh();
+	ofPushMatrix();
+	ofMultMatrix(tempTransform);
 	mesh.draw();
+	ofPopMatrix();
 }
 
 void VDB::save(string filename) {
@@ -274,6 +284,15 @@ void VDB::toEmber(string filename) {
 
 	delete[] pval;
 
+}
+
+pair<ofVec3f, ofVec3f> VDB::bbox() {
+	math::CoordBBox bbox = grid->evalActiveVoxelBoundingBox();
+	Coord minC = bbox.getStart();
+	Coord maxC = bbox.getEnd();
+	Vec3d minPt = grid->indexToWorld(minC);
+	Vec3d maxPt = grid->indexToWorld(maxC);
+	return make_pair(ofVec3f(minPt.x(), minPt.y(), minPt.z()), ofVec3f(maxPt.x(), maxPt.y(), maxPt.z()));
 }
 
 bool VDB::intersectRay(const float x, const float y, const float z, const float dx, const float dy, const float dz, float & ox, float &oy, float &oz) {

@@ -157,7 +157,7 @@
       <PreprocessorDefinitions>%(PreprocessorDefinitions);OPENVDB_STATICLIB</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
-      <AdditionalIncludeDirectories>C:\dev\tbb44_20150728oss\include;C:\dev\zlib-1.2.5;C:\dev\ilmbase-2.2.0\Half;C:\dev\boost_1_59_0;C:\dev;%(AdditionalIncludeDirectories);src;..\..\..\addons\ofxGui\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\dev\tbb44_20150728oss\include;C:\dev\zlib-1.2.5;C:\dev\ilmbase-2.2.0\Half;C:\dev\boost_1_59_0;C:\dev\openvdb;%(AdditionalIncludeDirectories);src;..\..\..\addons\ofxGui\src</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -174,6 +174,7 @@
     <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\Gumball.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\ofApp.cpp" />
     <ClCompile Include="..\..\..\addons\ofxGui\src\ofxBaseGui.cpp" />
@@ -187,6 +188,7 @@
     <ClCompile Include="src\VDB.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Gumball.h" />
     <ClInclude Include="src\LevelSetCapsule.h" />
     <ClInclude Include="src\ofApp.h" />
     <ClInclude Include="..\..\..\addons\ofxGui\src\ofxBaseGui.h" />

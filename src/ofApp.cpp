@@ -3,8 +3,8 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
-	grid.grid = openvdb::tools::createLevelSetCapsule<openvdb::FloatGrid>(3, openvdb::Vec3f(0, 0, 0), openvdb::Vec3f(20, -20, 20), 0.5);
-	grid.isUpdated = false;
+	gumball.setCamera(cam);
+	ofAddListener(gumball.gumballEvent, this, &ofApp::gumballEvent);
 	resolution = .3;
 }
 
@@ -39,6 +39,10 @@ void ofApp::draw(){
 		}
 		g->draw();
 	}
+	ofDisableDepthTest();
+	ofDisableLighting();
+	gumball.draw();
+
 	cam.end();
 }
 
@@ -161,55 +165,73 @@ void ofApp::keyReleased(int key){
 
 //--------------------------------------------------------------
 void ofApp::mouseMoved(int x, int y ){
-
+	isMouseClick = false;
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button){
-
+	isMouseClick = false;
 }
 
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button){
-
+	isMouseClick = true;
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button){
-	if (button == OF_MOUSE_BUTTON_1) {
-		ofVec2f mousePt(x, y);
-		ofVec3f sPt = cam.screenToWorld(ofVec3f(mousePt.x, mousePt.y, -.9));
-		ofVec3f sPt2 = cam.screenToWorld(ofVec3f(mousePt.x, mousePt.y, .9));
-		ofVec3f srfPt;
-		float t, minT = 9e9;
-		VDB::Ptr sel = nullptr;
-		for (auto g : grids) {
-			if (g->intersectRay(sPt, (sPt2 - sPt), srfPt, t)) {
-				if (t < minT) {
-					minT = t;
-					sel = g;
+	if (isMouseClick) {
+		if (button == OF_MOUSE_BUTTON_1) {
+			ofVec2f mousePt(x, y);
+			ofVec3f sPt = cam.screenToWorld(ofVec3f(mousePt.x, mousePt.y, -.9));
+			ofVec3f sPt2 = cam.screenToWorld(ofVec3f(mousePt.x, mousePt.y, .9));
+			ofVec3f srfPt;
+			float t, minT = 9e9;
+			VDB::Ptr sel = nullptr;
+			for (auto g : grids) {
+				if (g->intersectRay(sPt, (sPt2 - sPt), srfPt, t)) {
+					if (t < minT) {
+						minT = t;
+						sel = g;
+					}
 				}
 			}
-		}
-		if (ofGetKeyPressed(OF_KEY_SHIFT)) {
-			if (sel != nullptr) {
-				if (!isSelected(sel)) {
-					selected.push_back(sel);
+			if (ofGetKeyPressed(OF_KEY_SHIFT)) {
+				if (sel != nullptr) {
+					if (!isSelected(sel)) {
+						selected.push_back(sel);
+					}
 				}
 			}
-		}
-		else if (ofGetKeyPressed(OF_KEY_CONTROL)) {
-			if (sel != nullptr) {
-				auto it = find(selected.begin(), selected.end(), sel);
-				if (it != selected.end()) {
-					selected.erase(it);
+			else if (ofGetKeyPressed(OF_KEY_CONTROL)) {
+				if (sel != nullptr) {
+					auto it = find(selected.begin(), selected.end(), sel);
+					if (it != selected.end()) {
+						selected.erase(it);
+					}
 				}
 			}
+			else {
+				selected.clear();
+				if (sel != nullptr) selected.push_back(sel);
+			}
 		}
-		else {
-			selected.clear();
-			if (sel != nullptr) selected.push_back(sel);	
-		}
+	}
+	if (selected.size() > 0) {
+		gumball.enable();
+		//get center
+		pair<ofVec3f, ofVec3f> bbox = selected.front()->bbox();
+		gumball.setPosition((bbox.first + bbox.second)*0.5);
+	}
+	else {
+		gumball.disable();
+		gumball.setOrientation(ofVec3f(0, 0, 0));
+	}
+}
+
+void ofApp::gumballEvent(GumballInfo & args) {
+	for (auto g : selected) {
+		g->transform(args.transform);
 	}
 }
 

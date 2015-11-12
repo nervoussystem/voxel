@@ -3,6 +3,7 @@
 #include "ofMain.h"
 #include "VDB.h"
 #include "Gumball.h"
+#include "ofxGui.h"
 
 class ofApp : public ofBaseApp{
 
@@ -24,6 +25,14 @@ class ofApp : public ofBaseApp{
 
 		void doDelete();
 
+		ofxPanel gui;
+		ofxButton unionButton;
+		ofxButton differenceButton;
+		ofxButton intersectButton;
+		ofxButton offsetButton;
+		ofxFloatSlider offsetSlider;
+		ofxFloatSlider resolutionSlider;
+		void setupGui();
 		bool isMouseClick;
 		
 		void keyPressed(int key);
@@ -38,5 +47,8 @@ class ofApp : public ofBaseApp{
 		void dragEvent(ofDragInfo info);
 		void windowResized(int w, int h);
 		void gotMessage(ofMessage msg);
-		
+
+		void resolutionChanged(float & val);
+		void doUnion();
+
 };

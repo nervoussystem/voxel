@@ -3,9 +3,11 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
+	openvdb::initialize();
 	gumball.setCamera(cam);
 	ofAddListener(gumball.gumballEvent, this, &ofApp::gumballEvent);
 	resolution = .3;
+	setupGui();
 }
 
 int step = 200;
@@ -44,6 +46,8 @@ void ofApp::draw(){
 	gumball.draw();
 
 	cam.end();
+
+	gui.draw();
 }
 
 bool ofApp::isSelected(VDB::Ptr g) {
@@ -62,7 +66,7 @@ void ofApp::loadLines(string filename) {
 	ifstream in(filename);
 	string cLine, token;
 	float f;
-	openvdb::Vec3f v1, v2;
+	openvdb::Vec3f v1, v2,v3;
 	float cthick;
 	VDB::Ptr newGrid(new VDB());
 	int count = 0;
@@ -97,17 +101,31 @@ void ofApp::loadLines(string filename) {
 				}
 				num++;
 			}
-			openvdb::tools::LevelSetCapsule<openvdb::FloatGrid> factory(cthick, v1, v2);
-			factory.mGrid = newGrid->grid;
-			factory.rasterCapsule(0.5, 3);
+			v3 = v2 - v1;
+			float len = v3.lengthSqr();
+			if (len > 1e-8 && len < 100) {
+				openvdb::tools::LevelSetCapsule<openvdb::FloatGrid> factory(cthick, v1, v2);
+				factory.mGrid = newGrid->grid;
+				factory.rasterCapsule(resolution, 3);
+			}
 			cout << count++ << endl;
 		}
 	}
 	cout << "background " <<  newGrid->grid->background() << endl;
 	newGrid->floodFill();
 	newGrid->isUpdated = false;
+	newGrid->grid->transform().preScale(resolution);
 	grids.push_back(newGrid);
 	in.close();
+}
+
+void ofApp::setupGui() {
+	resolutionSlider.addListener(this, &ofApp::resolutionChanged);
+	unionButton.addListener(this, &ofApp::doUnion);
+
+	gui.setup();
+	gui.add(resolutionSlider.setup("resolution", resolution, 0.01, 2));
+	gui.add(unionButton.setup("union"));
 }
 
 void ofApp::dragEvent(ofDragInfo info) {
@@ -136,6 +154,19 @@ void ofApp::dragEvent(ofDragInfo info) {
 				//grid.updateMesh();
 				//grid.mesh.save(info.files[i].substr(0,info.files[i].size() - 3) + "ply");
 			}
+			else if (info.files[i].substr(info.files[i].size() - 3) == "vdb") {
+				openvdb::io::File file(info.files[i]);
+				cout << file.filename() << endl;
+				file.open();
+				openvdb::GridPtrVecPtr ogrids =  file.getGrids();
+				for (auto g : *ogrids) {
+					
+					VDB::Ptr newGrid(new VDB());
+					newGrid->grid = openvdb::gridPtrCast<openvdb::FloatGrid>(g);
+
+					grids.push_back(newGrid);
+				}
+			}
 		}
 	}
 }
@@ -144,12 +175,22 @@ void ofApp::dragEvent(ofDragInfo info) {
 void ofApp::keyPressed(int key){
 	if (key == 's') {
 		grids.front()->mesh.save("solid.ply");
-	}
-	else if (key == 'e') {
+	} if (key == 'v') {
+		openvdb::io::File file(ofToDataPath("mygrids.vdb"));
+		// Add the grid pointer to a container.
+		openvdb::GridPtrVec sgrids;
+		for(auto &g : grids) 
+			sgrids.push_back(g->grid);
+		// Write out the contents of the container.
+		file.write(sgrids);
+		file.close();
+	} else if (key == 'e') {
 		grid.toEmber("cats");
 	}
 	else if (key == 'b') {
-		grid.blur();
+		for (auto g : selected) {
+			g->blur();
+		}
 	}
 	else if (key == 'o') {
 		grid.offset(-.05);
@@ -254,3 +295,20 @@ void ofApp::windowResized(int w, int h){
 void ofApp::gotMessage(ofMessage msg){
 
 }
+
+void ofApp::resolutionChanged(float & val) {
+	resolution = val;
+}
+
+
+void ofApp::doUnion() {
+	auto it = selected.begin();
+	VDB::Ptr newGrid(new VDB(**it));
+	it++;
+	while (it != selected.end()) {
+		newGrid->doUnion(**it);
+		it++;
+	}
+	grids.push_back(newGrid);
+}
+

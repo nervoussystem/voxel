@@ -65,7 +65,9 @@ void VDB::load(string filename) {
 }
 
 void VDB::doUnion(VDB & vdb) {
-	csgUnion(*grid, *(vdb.grid));
+	FloatGrid::Ptr cGrid = FloatGrid::create();
+	cGrid = vdb.grid->deepCopy(); 
+	csgUnion(*grid, *cGrid);
 	isUpdated = false;
 }
 

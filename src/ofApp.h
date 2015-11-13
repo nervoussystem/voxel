@@ -50,5 +50,7 @@ class ofApp : public ofBaseApp{
 
 		void resolutionChanged(float & val);
 		void doUnion();
-
+		void doIntersection();
+		void doDifference();
+		void doOffset(float val);
 };

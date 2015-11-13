@@ -122,10 +122,16 @@ void ofApp::loadLines(string filename) {
 void ofApp::setupGui() {
 	resolutionSlider.addListener(this, &ofApp::resolutionChanged);
 	unionButton.addListener(this, &ofApp::doUnion);
+	intersectButton.addListener(this, &ofApp::doIntersection);
+	differenceButton.addListener(this, &ofApp::doDifference);
 
 	gui.setup();
 	gui.add(resolutionSlider.setup("resolution", resolution, 0.01, 2));
 	gui.add(unionButton.setup("union"));
+	gui.add(intersectButton.setup("intersect"));
+	gui.add(differenceButton.setup("difference"));
+	gui.add(offsetButton.setup("offset"));
+	gui.add(offsetSlider.setup("offset amt", 0, -5, 5));
 }
 
 void ofApp::dragEvent(ofDragInfo info) {
@@ -302,13 +308,42 @@ void ofApp::resolutionChanged(float & val) {
 
 
 void ofApp::doUnion() {
-	auto it = selected.begin();
-	VDB::Ptr newGrid(new VDB(**it));
-	it++;
-	while (it != selected.end()) {
-		newGrid->doUnion(**it);
+	if (selected.size() > 1) {
+		auto it = selected.begin();
+		VDB::Ptr newGrid(new VDB(**it));
 		it++;
+		while (it != selected.end()) {
+			newGrid->doUnion(**it);
+			it++;
+		}
+		grids.push_back(newGrid);
 	}
-	grids.push_back(newGrid);
+}
+
+
+void ofApp::doIntersection() {
+	if (selected.size() > 1) {
+		auto it = selected.begin();
+		VDB::Ptr newGrid(new VDB(**it));
+		it++;
+		while (it != selected.end()) {
+			newGrid->doIntersect(**it);
+			it++;
+		}
+		grids.push_back(newGrid);
+	}
+}
+
+void ofApp::doDifference() {
+	if (selected.size() > 1) {
+		auto it = selected.begin();
+		VDB::Ptr newGrid(new VDB(**it));
+		it++;
+		while (it != selected.end()) {
+			newGrid->doDifference(**it);
+			it++;
+		}
+		grids.push_back(newGrid);
+	}
 }
 

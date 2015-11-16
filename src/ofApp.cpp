@@ -112,11 +112,12 @@ void ofApp::loadLines(string filename) {
 		}
 	}
 	cout << "background " <<  newGrid->grid->background() << endl;
+	in.close(); 
 	newGrid->floodFill();
 	newGrid->isUpdated = false;
 	newGrid->grid->transform().preScale(resolution);
-	grids.push_back(newGrid);
-	in.close();
+	if(!newGrid->grid->empty())
+		grids.push_back(newGrid);	
 }
 
 void ofApp::setupGui() {
@@ -124,6 +125,7 @@ void ofApp::setupGui() {
 	unionButton.addListener(this, &ofApp::doUnion);
 	intersectButton.addListener(this, &ofApp::doIntersection);
 	differenceButton.addListener(this, &ofApp::doDifference);
+	offsetButton.addListener(this, &ofApp::doOffset);
 
 	gui.setup();
 	gui.add(resolutionSlider.setup("resolution", resolution, 0.01, 2));
@@ -169,8 +171,8 @@ void ofApp::dragEvent(ofDragInfo info) {
 					
 					VDB::Ptr newGrid(new VDB());
 					newGrid->grid = openvdb::gridPtrCast<openvdb::FloatGrid>(g);
-
-					grids.push_back(newGrid);
+					if (!newGrid->grid->empty())
+						grids.push_back(newGrid);
 				}
 			}
 		}
@@ -278,7 +280,14 @@ void ofApp::mouseReleased(int x, int y, int button){
 
 void ofApp::gumballEvent(GumballInfo & args) {
 	for (auto g : selected) {
-		g->transform(args.transform);
+		if (args.type == GumballEventType::GUMBALL_TRANSLATE) {
+			g->translate(args.dir*args.val);
+		}
+		else if (args.type == GumballEventType::GUMBALL_ROTATE) {
+			g->translate(-gumball.getPosition());
+			g->rotate(args.dir, args.val);
+			g->translate(gumball.getPosition());
+		}
 	}
 }
 
@@ -344,6 +353,13 @@ void ofApp::doDifference() {
 			it++;
 		}
 		grids.push_back(newGrid);
+	}
+}
+
+void ofApp::doOffset() {
+	float offsetAmt = offsetSlider.getParameter().cast<float>().get();
+	for(auto g : selected) {
+		g->offset(offsetAmt);
 	}
 }
 

@@ -6,6 +6,9 @@
 #include "ofCamera.h"
 
 enum GumballEventType {
+	GUMBALL_ROTATE,
+	GUMBALL_TRANSLATE,
+	GUMBALL_SCALE,
 	GUMBALL_DRAGGING,
 	GUMBALL_DOWN,
 	GUMBALL_UP,
@@ -14,6 +17,8 @@ enum GumballEventType {
 struct GumballInfo {
 	ofMatrix4x4 transform;
 	GumballEventType type;
+	float val;
+	ofVec3f dir;
 
 	GumballInfo(ofMatrix4x4 & trans, GumballEventType t) {
 		trans = transform;

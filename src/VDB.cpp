@@ -188,6 +188,18 @@ void VDB::transform(ofMatrix4x4 & mat) {
 	grid->transform().postMult(vMat);
 }
 
+void VDB::translate(ofVec3f dir) {
+	tempTransform.translate(dir);
+	grid->transform().postTranslate(Vec3d(dir.x, dir.y, dir.z));
+}
+
+void VDB::rotate(const ofVec3f & axis, float angle) {
+	Mat4d mat;
+	mat.setToRotation(Vec3R(axis.x, axis.y, axis.z), angle);
+	tempTransform.rotateRad(angle, axis.x, axis.y, axis.z);
+	grid->transform().postMult(mat);
+}
+
 void VDB::draw() {
 	if (!isUpdated) updateMesh();
 	ofPushMatrix();

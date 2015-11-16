@@ -11,6 +11,7 @@ class ofApp : public ofBaseApp{
 		ofEasyCam cam;
 		Gumball gumball;
 		VDB grid;
+		VDB mask;
 
 		list<VDB::Ptr> grids;
 		list<VDB::Ptr> selected;
@@ -52,5 +53,5 @@ class ofApp : public ofBaseApp{
 		void doUnion();
 		void doIntersection();
 		void doDifference();
-		void doOffset(float val);
+		void doOffset();
 };

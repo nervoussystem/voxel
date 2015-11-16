@@ -233,6 +233,9 @@ void Gumball::update(ofEventArgs &args) {
 					transMat.setTranslation(getXAxis()*(proj-prevProj));
 					move(getXAxis()*(proj-prevProj));
 					gumballInfo.transform = transMat;
+					gumballInfo.type = GumballEventType::GUMBALL_TRANSLATE;
+					gumballInfo.dir = getXAxis();
+					gumballInfo.val = proj - prevProj;
 					ofNotifyEvent(gumballEvent, gumballInfo ,this);
 				} else if(bYClicked) {
 					ofVec2f pt = camera->worldToScreen(getPosition()+getYAxis());
@@ -241,6 +244,9 @@ void Gumball::update(ofEventArgs &args) {
 					transMat.setTranslation(getYAxis()*(proj-prevProj));
 					move(getYAxis()*(proj-prevProj));
 					gumballInfo.transform = transMat;
+					gumballInfo.type = GumballEventType::GUMBALL_TRANSLATE;
+					gumballInfo.dir = getYAxis();
+					gumballInfo.val = proj - prevProj;
 					ofNotifyEvent(gumballEvent, gumballInfo ,this);
 				} else if(bZClicked) {
 					ofVec2f pt = camera->worldToScreen(getPosition()+getZAxis());
@@ -249,6 +255,9 @@ void Gumball::update(ofEventArgs &args) {
 					transMat.setTranslation(getZAxis()*(proj-prevProj));
 					move(getZAxis()*(proj-prevProj));
 					gumballInfo.transform = transMat;
+					gumballInfo.type = GumballEventType::GUMBALL_TRANSLATE;
+					gumballInfo.dir = getZAxis();
+					gumballInfo.val = proj - prevProj;
 					ofNotifyEvent(gumballEvent, gumballInfo ,this);
 				} else if(bXYClicked) {
 					if(mouse != pMouse) {
@@ -271,6 +280,9 @@ void Gumball::update(ofEventArgs &args) {
 						transMat.rotate(rot);
 						transMat.translate(getPosition());
 						gumballInfo.transform = transMat;
+						gumballInfo.type = GumballEventType::GUMBALL_ROTATE;
+						gumballInfo.dir = getZAxis();
+						gumballInfo.val = radians;
 						ofNotifyEvent(gumballEvent, gumballInfo ,this);
 					}
 				} else if(bYZClicked) {
@@ -294,6 +306,9 @@ void Gumball::update(ofEventArgs &args) {
 						transMat.rotate(rot);
 						transMat.translate(getPosition());
 						gumballInfo.transform = transMat;
+						gumballInfo.type = GumballEventType::GUMBALL_ROTATE;
+						gumballInfo.dir = getXAxis();
+						gumballInfo.val = radians;
 						ofNotifyEvent(gumballEvent, gumballInfo ,this);
 					}
 				} else if(bZXClicked) {
@@ -318,6 +333,10 @@ void Gumball::update(ofEventArgs &args) {
 						transMat.translate(getPosition());
 
 						gumballInfo.transform = transMat;
+						gumballInfo.type = GumballEventType::GUMBALL_ROTATE;
+						gumballInfo.dir = getYAxis();
+						gumballInfo.val = radians;
+
 						ofNotifyEvent(gumballEvent, gumballInfo ,this);
 					}
 				}

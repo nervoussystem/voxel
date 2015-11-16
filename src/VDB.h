@@ -32,6 +32,8 @@ public:
 	void updateMesh();
 
 	void transform(ofMatrix4x4 & mat);
+	void translate(ofVec3f dir);
+	void rotate(const ofVec3f & axis, float angle);
 	pair<ofVec3f, ofVec3f> bbox();
 	void draw();
 	void save(string filename);

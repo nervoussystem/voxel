@@ -141,7 +141,7 @@ void VDB::updateMesh() {
 	for (Index64 n = 0, i = 0, N = mesher.pointListSize(); n < N; ++n) {
 		const openvdb::Vec3s& p = mesher.pointList()[n];
 		mesh.addVertex(ofVec3f(p[0], p[1], p[2]));
-		mesh.addNormal(ofVec3f(0,0,1));
+		mesh.addNormal(ofVec3f(0,0,0));
 	}
 
 	// Copy primitives
@@ -164,17 +164,18 @@ void VDB::updateMesh() {
 			mesh.addIndex(quad[3]);
 			mesh.addIndex(quad[2]);
 
-			e1 = mesh.getVertex(quad[1]);
+			e1 = mesh.getVertex(quad[2]);
 			e1 -= mesh.getVertex(quad[0]);
-			e2 = mesh.getVertex(quad[2]);
+			e2 = mesh.getVertex(quad[3]);
 			e2 -= mesh.getVertex(quad[1]);
 			norm = e1.cross(e2);
 
-			const float length = norm.length();
-			if (length > 1.0e-6) norm /= length;
+			//const float length = norm.length();
+			//if (length > 1.0e-6) norm /= length;
 			//norm *= -1;
 			for (int v = 0; v < 4; ++v) {
-				mesh.setNormal(quad[v], norm);
+				mesh.setNormal(quad[v], mesh.getNormal(quad[v]) + norm);
+				//mesh.setNormal(quad[v], norm);
 			}
 		}
 	}

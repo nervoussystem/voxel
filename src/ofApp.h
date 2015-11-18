@@ -1,9 +1,10 @@
 #pragma once
 
 #include "ofMain.h"
+#include "ofxGui.h"
+#include "ofxDatGui.h"
 #include "VDB.h"
 #include "Gumball.h"
-#include "ofxGui.h"
 
 class ofApp : public ofBaseApp{
 
@@ -18,6 +19,7 @@ class ofApp : public ofBaseApp{
 		stack<list<VDB *> > state;
 
 		float resolution;
+		float offsetAmt;
 		void setup();
 		void update();
 		void draw();
@@ -26,13 +28,18 @@ class ofApp : public ofBaseApp{
 
 		void doDelete();
 
-		ofxPanel gui;
+		ofxDatGui * gui;
+		//ofxPanel gui;
 		ofxButton unionButton;
 		ofxButton differenceButton;
 		ofxButton intersectButton;
 		ofxButton offsetButton;
 		ofxFloatSlider offsetSlider;
 		ofxFloatSlider resolutionSlider;
+		ofxButton laplacianBlurButton;
+		ofxButton saveButton;
+		ofxButton exportButton;
+		
 		void setupGui();
 		bool isMouseClick;
 		
@@ -49,9 +56,13 @@ class ofApp : public ofBaseApp{
 		void windowResized(int w, int h);
 		void gotMessage(ofMessage msg);
 
+		void buttonEvent(ofxDatGuiButtonEvent e);
 		void resolutionChanged(float & val);
 		void doUnion();
 		void doIntersection();
 		void doDifference();
 		void doOffset();
+		void saveVDB(string filename);
+		void saveMesh(string filename);
+		void doLaplacianBlur();
 };

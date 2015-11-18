@@ -47,7 +47,6 @@ void ofApp::draw(){
 
 	cam.end();
 
-	gui.draw();
 }
 
 bool ofApp::isSelected(VDB::Ptr g) {
@@ -121,11 +120,39 @@ void ofApp::loadLines(string filename) {
 }
 
 void ofApp::setupGui() {
+	gui = new ofxDatGui(ofxDatGuiAnchor::TOP_LEFT);
+	gui->addHeader(":: VOXELS ::");
+	ofxDatGuiSlider * resolutionSlider = gui->addSlider("resolution", 0, 2);
+	gui->addBreak();
+	gui->addLabel("BOOLEAN");
+	gui->addButton("union");
+	gui->addButton("intersection");
+	gui->addButton("difference");
+	gui->addBreak();
+	gui->addLabel("modification");
+	ofxDatGuiSlider * offsetSlider = gui->addSlider("offset amt", -5, 5);
+	gui->addButton("offset");
+	gui->addButton("blur");
+	gui->addBreak();
+	gui->addLabel("saving");
+	gui->addTextInput("filename");
+	
+	gui->addButton("save");
+	gui->addButton("export mesh");
+
+	resolutionSlider->bind(&resolution, 0, 2);
+	offsetSlider->bind(&offsetAmt,-5,5);
+	
+	gui->onButtonEvent(this, &ofApp::buttonEvent);
+	/*
 	resolutionSlider.addListener(this, &ofApp::resolutionChanged);
 	unionButton.addListener(this, &ofApp::doUnion);
 	intersectButton.addListener(this, &ofApp::doIntersection);
 	differenceButton.addListener(this, &ofApp::doDifference);
 	offsetButton.addListener(this, &ofApp::doOffset);
+	laplacianBlurButton.addListener(this, &ofApp::doLaplacianBlur);
+	saveButton.addListener(this, &ofApp::saveVDB);
+	exportButton.addListener(this, &ofApp::saveMesh);
 
 	gui.setup();
 	gui.add(resolutionSlider.setup("resolution", resolution, 0.01, 2));
@@ -134,6 +161,11 @@ void ofApp::setupGui() {
 	gui.add(differenceButton.setup("difference"));
 	gui.add(offsetButton.setup("offset"));
 	gui.add(offsetSlider.setup("offset amt", 0, -5, 5));
+	gui.add(laplacianBlurButton.setup("laplacian blur"));
+	
+	gui.add(saveButton.setup("save"));
+	gui.add(exportButton.setup("export mesh"));
+	*/
 }
 
 void ofApp::dragEvent(ofDragInfo info) {
@@ -145,7 +177,7 @@ void ofApp::dragEvent(ofDragInfo info) {
 	subBox.loadMesh(box, 0.5);
 	if (info.files.size() > 0) {
 		for (int i = 0; i < info.files.size();i++) {
-			if (info.files[i].substr(info.files[i].size() - 3) == "ply") {
+			if (info.files[i].substr(info.files[i].size() - 3) == "ply" || info.files[i].substr(info.files[i].size() - 3) == "stl" || info.files[i].substr(info.files[i].size() - 3) == "obj") {
 				ofMesh mesh;
 				cout << info.files[i] << endl;
 				mesh.load(info.files[i]);
@@ -155,8 +187,7 @@ void ofApp::dragEvent(ofDragInfo info) {
 					cout << "background " << newGrid->grid->background() << endl;
 					grids.push_back(newGrid);
 				}
-			}
-			else if (info.files[i].substr(info.files[i].size() - 3) == "csv") {
+			} else if (info.files[i].substr(info.files[i].size() - 3) == "csv") {
 				loadLines(info.files[i]);
 				//grid.doDifference(subBox);
 				//grid.updateMesh();
@@ -182,26 +213,17 @@ void ofApp::dragEvent(ofDragInfo info) {
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
 	if (key == 's') {
-		grids.front()->mesh.save("solid.ply");
+		//grids.front()->mesh.save("solid.ply");
 	} if (key == 'v') {
-		openvdb::io::File file(ofToDataPath("mygrids.vdb"));
-		// Add the grid pointer to a container.
-		openvdb::GridPtrVec sgrids;
-		for(auto &g : grids) 
-			sgrids.push_back(g->grid);
-		// Write out the contents of the container.
-		file.write(sgrids);
-		file.close();
+		
 	} else if (key == 'e') {
-		grid.toEmber("cats");
+		//grid.toEmber("cats");
 	}
 	else if (key == 'b') {
-		for (auto g : selected) {
-			g->blur();
-		}
+		
 	}
 	else if (key == 'o') {
-		grid.offset(-.05);
+		//grid.offset(-.05);
 	}
 	else if (key == OF_KEY_DEL) {
 		doDelete();
@@ -229,6 +251,7 @@ void ofApp::mousePressed(int x, int y, int button){
 
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button){
+	if(gui->hitTest(ofPoint(x,y))) return;
 	if (isMouseClick) {
 		if (button == OF_MOUSE_BUTTON_1) {
 			ofVec2f mousePt(x, y);
@@ -315,6 +338,29 @@ void ofApp::resolutionChanged(float & val) {
 	resolution = val;
 }
 
+void ofApp::buttonEvent(ofxDatGuiButtonEvent e) {
+	if (e.target->is("union")) {
+		doUnion();
+	}
+	else if (e.target->is("intersection")) {
+		doIntersection();
+	}
+	else if (e.target->is("difference")) {
+		doDifference();
+	}
+	else if (e.target->is("offset")) {
+		doOffset();
+	}
+	else if (e.target->is("blur")) {
+		doLaplacianBlur();
+	}
+	else if (e.target->is("save")) {
+		saveVDB(gui->getTextInput("filename")->getText());
+	}
+	else if (e.target->is("export mesh")) {
+		saveMesh(gui->getTextInput("filename")->getText());
+	}
+}
 
 void ofApp::doUnion() {
 	if (selected.size() > 1) {
@@ -357,9 +403,39 @@ void ofApp::doDifference() {
 }
 
 void ofApp::doOffset() {
-	float offsetAmt = offsetSlider.getParameter().cast<float>().get();
+	//float offsetAmt = offsetSlider.getParameter().cast<float>().get();
 	for(auto g : selected) {
 		g->offset(offsetAmt);
 	}
 }
 
+void ofApp::doLaplacianBlur() {
+	for (auto g : selected) {
+		g->blur();
+	}
+}
+
+void ofApp::saveVDB(string filename) {
+	openvdb::io::File file(ofToDataPath(filename));
+	// Add the grid pointer to a container.
+	openvdb::GridPtrVec sgrids;
+	for (auto &g : grids)
+		sgrids.push_back(g->grid);
+	// Write out the contents of the container.
+	file.write(sgrids);
+	file.close();
+}
+
+void ofApp::saveMesh(string filename) {
+	ofMesh m;
+	cout << filename << endl;
+	for (auto g : selected) {
+		g->updateMesh();
+		ofIndexType baseIndex = m.getNumVertices();
+		m.addVertices(g->mesh.getVertices());
+		for (auto i : g->mesh.getIndices()) {
+			m.addIndex(i + baseIndex);
+		}
+	}
+	m.save(filename);
+}

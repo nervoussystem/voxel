@@ -50,18 +50,22 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\..\libs\openFrameworksCompiled\project\vs\openFrameworksRelease.props" />
+    <Import Project="..\VDB.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\..\libs\openFrameworksCompiled\project\vs\openFrameworksRelease.props" />
+    <Import Project="..\VDB.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\..\libs\openFrameworksCompiled\project\vs\openFrameworksDebug.props" />
+    <Import Project="..\VDB.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\..\libs\openFrameworksCompiled\project\vs\openFrameworksDebug.props" />
+    <Import Project="..\VDB.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -95,7 +99,7 @@
       <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);src;..\..\..\addons\ofxGui\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);src;..\..\..\addons\ofxDatGui\src;..\..\..\addons\ofxDatGui\src\components;..\..\..\addons\ofxDatGui\src\core;..\..\..\addons\ofxDatGui\src\templates;..\..\..\addons\ofxGui\src</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
     <Link>
@@ -114,18 +118,16 @@
       <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
-      <AdditionalIncludeDirectories>C:\dev\tbb44_20150728oss\include;C:\dev\zlib-1.2.5;C:\dev\ilmbase-2.2.0\Half;C:\dev\boost_1_59_0;C:\dev;%(AdditionalIncludeDirectories);src;..\..\..\addons\ofxGui\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);src;..\..\..\addons\ofxDatGui\src;..\..\..\addons\ofxDatGui\src\components;..\..\..\addons\ofxDatGui\src\core;..\..\..\addons\ofxDatGui\src\templates;..\..\..\addons\ofxGui\src</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
-      <AdditionalDependencies>openVDB.lib;zlibstat.lib;Half.lib;tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\dev\boost_1_59_0\lib64-msvc-14.0;C:\dev\lib\x64\v140;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions>/FORCE:MULTIPLE %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent />
   </ItemDefinitionGroup>
@@ -135,7 +137,7 @@
       <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);src;..\..\..\addons\ofxGui\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);src;..\..\..\addons\ofxDatGui\src;..\..\..\addons\ofxDatGui\src\components;..\..\..\addons\ofxDatGui\src\core;..\..\..\addons\ofxDatGui\src\templates;..\..\..\addons\ofxGui\src</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -154,29 +156,32 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);OPENVDB_STATICLIB</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
-      <AdditionalIncludeDirectories>C:\dev\tbb44_20150728oss\include;C:\dev\zlib-1.2.5;C:\dev\ilmbase-2.2.0\Half;C:\dev\boost_1_59_0;C:\dev\openvdb;%(AdditionalIncludeDirectories);src;..\..\..\addons\ofxGui\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);src;..\..\..\addons\ofxDatGui\src;..\..\..\addons\ofxDatGui\src\components;..\..\..\addons\ofxDatGui\src\core;..\..\..\addons\ofxDatGui\src\templates;..\..\..\addons\ofxGui\src</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <GenerateDebugInformation>Debug</GenerateDebugInformation>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
-      <AdditionalDependencies>openVDB.lib;zlibstat.lib;Half.lib;tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\dev\boost_1_59_0\lib64-msvc-14.0;C:\dev\lib\x64\v140;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\Gumball.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\ofApp.cpp" />
+    <ClCompile Include="src\Gumball.cpp" />
+    <ClCompile Include="src\VDB.cpp" />
+    <ClCompile Include="..\..\..\addons\ofxDatGui\src\core\ofxDatGuiComponent.cpp" />
+    <ClCompile Include="..\..\..\addons\ofxDatGui\src\ofxDatGui.cpp" />
+    <ClCompile Include="..\..\..\addons\ofxDatGui\src\templates\ofxDatGuiTemplate.cpp" />
     <ClCompile Include="..\..\..\addons\ofxGui\src\ofxBaseGui.cpp" />
     <ClCompile Include="..\..\..\addons\ofxGui\src\ofxButton.cpp" />
     <ClCompile Include="..\..\..\addons\ofxGui\src\ofxGuiGroup.cpp" />
@@ -185,12 +190,32 @@
     <ClCompile Include="..\..\..\addons\ofxGui\src\ofxSlider.cpp" />
     <ClCompile Include="..\..\..\addons\ofxGui\src\ofxSliderGroup.cpp" />
     <ClCompile Include="..\..\..\addons\ofxGui\src\ofxToggle.cpp" />
-    <ClCompile Include="src\VDB.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\ofApp.h" />
     <ClInclude Include="src\Gumball.h" />
     <ClInclude Include="src\LevelSetCapsule.h" />
-    <ClInclude Include="src\ofApp.h" />
+    <ClInclude Include="src\VDB.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\components\ofxDatGui2dPad.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\components\ofxDatGuiButton.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\components\ofxDatGuiColorPicker.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\components\ofxDatGuiControls.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\components\ofxDatGuiFRM.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\components\ofxDatGuiGroups.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\components\ofxDatGuiLabel.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\components\ofxDatGuiMatrix.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\components\ofxDatGuiSlider.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\components\ofxDatGuiTextInput.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\components\ofxDatGuiTextInputField.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\components\ofxDatGuiTimeGraph.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\core\ofxDatGuiComponent.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\core\ofxDatGuiConstants.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\core\ofxDatGuiEvents.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\core\ofxDatGuiFont.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\core\ofxDatGuiIntObject.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\ofxDatGui.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\templates\ofxDatGuiTemplate.h" />
+    <ClInclude Include="..\..\..\addons\ofxDatGui\src\templates\ofxDatGuiTemplates.h" />
     <ClInclude Include="..\..\..\addons\ofxGui\src\ofxBaseGui.h" />
     <ClInclude Include="..\..\..\addons\ofxGui\src\ofxButton.h" />
     <ClInclude Include="..\..\..\addons\ofxGui\src\ofxGui.h" />
@@ -200,7 +225,6 @@
     <ClInclude Include="..\..\..\addons\ofxGui\src\ofxSlider.h" />
     <ClInclude Include="..\..\..\addons\ofxGui\src\ofxSliderGroup.h" />
     <ClInclude Include="..\..\..\addons\ofxGui\src\ofxToggle.h" />
-    <ClInclude Include="src\VDB.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="$(OF_ROOT)\libs\openFrameworksCompiled\project\vs\openframeworksLib.vcxproj">

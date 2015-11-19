@@ -131,7 +131,7 @@ void VDB::floodFill() {
 void VDB::updateMesh() {
 	
 	//openvdb::tools::VolumeToMesh mesher(grid->getGridClass() == openvdb::GRID_LEVEL_SET ? 0.0 : 0.01);
-	openvdb::tools::VolumeToMesh mesher(0.0);
+	openvdb::tools::VolumeToMesh mesher(isovalue);
 	mesher(*grid);
 
 	mesh.clear();
@@ -217,6 +217,7 @@ VDB::VDB() {
 	grid = FloatGrid::create(1.2);
 	grid->setGridClass(GRID_LEVEL_SET);
 	mesh.enableNormals();
+	isovalue = 0.0;
 	isUpdated = false;
 }
 
@@ -224,12 +225,14 @@ VDB::VDB(ofMesh & m, float resolution) {
 	grid = FloatGrid::create(resolution*3);
 	mesh.enableNormals();
 	isUpdated = false;
+	isovalue = 0.0;
 	loadMesh(m, resolution);
 }
 
 VDB::VDB(const VDB & vdb) {
 	grid = vdb.grid->deepCopy();
 	mesh.enableNormals();
+	isovalue = vdb.isovalue;
 	isUpdated = false;
 }
 
@@ -318,6 +321,11 @@ void VDB::toEmber(string filename) {
 
 }
 
+void VDB::setThreshold(float thresh) {
+	isovalue = thresh;
+	isUpdated = false;
+}
+
 pair<ofVec3f, ofVec3f> VDB::bbox() {
 	math::CoordBBox bbox = grid->evalActiveVoxelBoundingBox();
 	Coord minC = bbox.getStart();
@@ -356,4 +364,27 @@ bool VDB::intersectRay(const float x, const float y, const float z, const float 
 
 bool VDB::intersectRay(const ofVec3f & pt, const ofVec3f & dir, ofVec3f & out, float &t) {
 	return intersectRay(pt.x, pt.y, pt.z, dir.x, dir.y, dir.z, out.x, out.y, out.z, t);
+}
+
+void VDB::loadVol(ifstream & buf, int w, int h, int d, float resolution) {
+	FloatGrid::Accessor acc = grid->getAccessor();
+	Coord ijk;
+	grid->setGridClass(GRID_FOG_VOLUME);
+
+	float f;
+	int &x = ijk[0], &y = ijk[1], &z = ijk[2];
+	for (x = 0; x < w; ++x) {
+		for (y = 0; y < h; ++y) {
+			for (z = 0; z < d; ++z) {
+				buf.read((char *)&f, sizeof(f));
+				acc.setValue(ijk, f);
+			}
+		}
+	}
+	isovalue = 10.0;
+	grid->pruneGrid();
+	math::Transform trans;
+	trans.preScale(resolution);
+	grid->transform() = trans;
+	isUpdated = false;
 }

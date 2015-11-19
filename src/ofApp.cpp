@@ -119,6 +119,16 @@ void ofApp::loadLines(string filename) {
 		grids.push_back(newGrid);	
 }
 
+void ofApp::loadVol(string filename) {
+	ifstream in(filename);
+	VDB::Ptr newGrid(new VDB());
+	newGrid->loadVol(in, 496, 496, 496, .1725);
+	if (!newGrid->grid->empty())
+		grids.push_back(newGrid);
+	else
+		cout << "Error: empty grid" << endl;
+}
+
 void ofApp::setupGui() {
 	gui = new ofxDatGui(ofxDatGuiAnchor::TOP_LEFT);
 	gui->addHeader(":: VOXELS ::");
@@ -206,6 +216,10 @@ void ofApp::dragEvent(ofDragInfo info) {
 						grids.push_back(newGrid);
 				}
 			}
+			else if (info.files[i].substr(info.files[i].size() - 3) == "vol") {
+				loadVol(info.files[i]);
+			}
+
 		}
 	}
 }

@@ -10,9 +10,11 @@ public:
 	typedef shared_ptr<VDB> Ptr;
 	openvdb::FloatGrid::Ptr grid;
 	ofVboMesh mesh;
+	float isovalue;
 	bool isUpdated;
 
 	void loadMesh(ofMesh & toLoad, float resolution = 1.0, int band = 3);
+	void loadVol(ifstream & buf, int w, int h , int d, float resolution = 1.0);
 	void clear();
 	void offset(float amt);
 	void load(string filename);
@@ -20,6 +22,7 @@ public:
 	void doDifference(VDB & vdb);
 	void doUnion(openvdb::FloatGrid::Ptr vdb);
 	void doIntersect(VDB & vdb);
+	void setThreshold(float thresh);
 
 	void floodFill();
 

@@ -24,6 +24,7 @@ class ofApp : public ofBaseApp{
 		void update();
 		void draw();
 		void loadLines(string filename);
+		void loadVol(string filename);
 		bool isSelected(VDB::Ptr g);
 
 		void doDelete();

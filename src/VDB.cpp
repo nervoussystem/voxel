@@ -321,11 +321,6 @@ void VDB::toEmber(string filename) {
 
 }
 
-void VDB::setThreshold(float thresh) {
-	isovalue = thresh;
-	isUpdated = false;
-}
-
 pair<ofVec3f, ofVec3f> VDB::bbox() {
 	math::CoordBBox bbox = grid->evalActiveVoxelBoundingBox();
 	Coord minC = bbox.getStart();
@@ -336,7 +331,7 @@ pair<ofVec3f, ofVec3f> VDB::bbox() {
 }
 
 bool VDB::intersectRay(const float x, const float y, const float z, const float dx, const float dy, const float dz, float & ox, float &oy, float &oz) {
-	LevelSetRayIntersector<FloatGrid> intersector(*grid);
+	LevelSetRayIntersector<FloatGrid> intersector(*grid, isovalue);
 	Vec3R pt;
 	
 	bool val = intersector.intersectsWS(math::Ray<Real>(Vec3R(x, y, z), Vec3R(dx, dy, dz)), pt);
@@ -351,38 +346,88 @@ bool VDB::intersectRay(const ofVec3f & pt, const ofVec3f & dir, ofVec3f & out) {
 }
 
 bool VDB::intersectRay(const float x, const float y, const float z, const float dx, const float dy, const float dz, float & ox, float &oy, float &oz, float & t) {
-	LevelSetRayIntersector<FloatGrid> intersector(*grid);
-	Vec3R pt;
-	Real t0;
-	bool val = intersector.intersectsWS(math::Ray<Real>(Vec3R(x, y, z), Vec3R(dx, dy, dz)), pt, t0);
-	t = t0;
-	ox = pt[0];
-	oy = pt[1];
-	oz = pt[2];
-	return val;
+	//if (grid->getGridClass() == GRID_LEVEL_SET) {
+		LevelSetRayIntersector<FloatGrid> intersector(*grid, isovalue);
+		Vec3R pt;
+		Real t0;
+		bool val = intersector.intersectsWS(math::Ray<Real>(Vec3R(x, y, z), Vec3R(dx, dy, dz)), pt, t0);
+		t = t0;
+		ox = pt[0];
+		oy = pt[1];
+		oz = pt[2];
+		return val;
+		/*
+		}
+
+	else {
+		VolumeRayIntersector<FloatGrid> intersector(*grid, isovalue);
+		Vec3R pt;
+		intersector.setWorldRay(math::Ray<Real>(Vec3R(x, y, z), Vec3R(dx, dy, dz)));
+		Real t0 = 0, t1 = 0;
+		while (intersector.march(t0,t1)) {
+			t = t0;
+			pt = intersector.getWorldPos(t0);
+			ox = pt[0];
+			oy = pt[1];
+			oz = pt[2];
+			return true;
+		}
+		return false;
+	}*/
 }
 
 bool VDB::intersectRay(const ofVec3f & pt, const ofVec3f & dir, ofVec3f & out, float &t) {
 	return intersectRay(pt.x, pt.y, pt.z, dir.x, dir.y, dir.z, out.x, out.y, out.z, t);
 }
 
+struct MatAdd {
+	float f;
+	MatAdd(float _f) : f(_f) {}
+	inline void operator()(const FloatGrid::ValueOnIter& iter) const {
+		iter.setValue(*iter + f);
+	}
+};
+
+
+void VDB::setThreshold(float thresh) {
+
+	//foreach(grid->beginValueOn(), MatAdd(thresh-isovalue));
+	isovalue = thresh;
+	isUpdated = false;
+}
+
+
 void VDB::loadVol(ifstream & buf, int w, int h, int d, float resolution) {
+	grid = FloatGrid::create(100);
 	FloatGrid::Accessor acc = grid->getAccessor();
 	Coord ijk;
-	grid->setGridClass(GRID_FOG_VOLUME);
-
+	grid->setGridClass(GRID_LEVEL_SET);
+	
+	float threshold = .05;
 	float f;
+	float minV = 9e9;
+	float maxV = -9e9;
 	int &x = ijk[0], &y = ijk[1], &z = ijk[2];
 	for (x = 0; x < w; ++x) {
 		for (y = 0; y < h; ++y) {
 			for (z = 0; z < d; ++z) {
 				buf.read((char *)&f, sizeof(f));
+				if (f < threshold) {
+					f = 0;
+				}
+				else {
+					f = -f;
+				}
+				minV = min(minV, f);
+				maxV = max(maxV, f);
 				acc.setValue(ijk, f);
 			}
 		}
 	}
-	isovalue = 10.0;
+	cout << "Loaded volume. min value: " << minV << " max value: " << maxV << endl;
+	//grid-> = max(abs(maxV), abs(minV));
 	grid->pruneGrid();
+	setThreshold(-.5);
 	math::Transform trans;
 	trans.preScale(resolution);
 	grid->transform() = trans;

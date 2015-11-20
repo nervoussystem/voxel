@@ -114,15 +114,25 @@ void ofApp::loadLines(string filename) {
 	in.close(); 
 	newGrid->floodFill();
 	newGrid->isUpdated = false;
+	newGrid->grid->pruneGrid();
 	newGrid->grid->transform().preScale(resolution);
 	if(!newGrid->grid->empty())
 		grids.push_back(newGrid);	
 }
 
 void ofApp::loadVol(string filename) {
-	ifstream in(filename);
+	ifstream in(filename, ios_base::binary);
+	//get size
+	in.seekg(0, in.end);
+	size_t length = in.tellg();
+	in.seekg(0, in.beg);
+	//assume cube and 32-bit floats
+
+	int dim = pow(length / 4, 1.0 / 3.0)+.5;
+	cout << "volume dimension: " << length << " " << dim << endl;
+	
 	VDB::Ptr newGrid(new VDB());
-	newGrid->loadVol(in, 496, 496, 496, .1725);
+	newGrid->loadVol(in, dim, dim, dim, .1725);
 	if (!newGrid->grid->empty())
 		grids.push_back(newGrid);
 	else
@@ -241,6 +251,16 @@ void ofApp::keyPressed(int key){
 	}
 	else if (key == OF_KEY_DEL) {
 		doDelete();
+	}
+	else if (key == OF_KEY_LEFT) {
+		for (auto g : grids) {
+			g->setThreshold(g->isovalue-.5);
+		}
+	}
+	else if (key == OF_KEY_RIGHT) {
+		for (auto g : grids) {
+			g->setThreshold(g->isovalue + .5);
+		}
 	}
 }
 

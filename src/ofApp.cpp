@@ -107,7 +107,7 @@ void ofApp::loadLines(string filename) {
 				factory.mGrid = newGrid->grid;
 				factory.rasterCapsule(resolution, 3);
 			}
-			cout << count++ << endl;
+			//cout << count++ << endl;
 		}
 	}
 	cout << "background " <<  newGrid->grid->background() << endl;
@@ -150,9 +150,10 @@ void ofApp::setupGui() {
 	gui->addButton("difference");
 	gui->addBreak();
 	gui->addLabel("modification");
-	ofxDatGuiSlider * offsetSlider = gui->addSlider("offset amt", -5, 5);
+	ofxDatGuiSlider * offsetSlider = gui->addSlider("offset amt", -10, 10);
 	gui->addButton("offset");
 	gui->addButton("blur");
+	gui->addButton("taubin");
 	gui->addBreak();
 	gui->addLabel("saving");
 	gui->addTextInput("filename");
@@ -197,7 +198,8 @@ void ofApp::dragEvent(ofDragInfo info) {
 	subBox.loadMesh(box, 0.5);
 	if (info.files.size() > 0) {
 		for (int i = 0; i < info.files.size();i++) {
-			if (info.files[i].substr(info.files[i].size() - 3) == "ply" || info.files[i].substr(info.files[i].size() - 3) == "stl" || info.files[i].substr(info.files[i].size() - 3) == "obj") {
+			string filetype = ofToLower(info.files[i].substr(info.files[i].size() - 3));
+			if (filetype == "ply" || filetype == "stl" || filetype == "obj") {
 				ofMesh mesh;
 				cout << info.files[i] << endl;
 				mesh.load(info.files[i]);
@@ -207,13 +209,13 @@ void ofApp::dragEvent(ofDragInfo info) {
 					cout << "background " << newGrid->grid->background() << endl;
 					grids.push_back(newGrid);
 				}
-			} else if (info.files[i].substr(info.files[i].size() - 3) == "csv") {
+			} else if (filetype == "csv") {
 				loadLines(info.files[i]);
 				//grid.doDifference(subBox);
 				//grid.updateMesh();
 				//grid.mesh.save(info.files[i].substr(0,info.files[i].size() - 3) + "ply");
 			}
-			else if (info.files[i].substr(info.files[i].size() - 3) == "vdb") {
+			else if (filetype == "vdb") {
 				openvdb::io::File file(info.files[i]);
 				cout << file.filename() << endl;
 				file.open();
@@ -226,7 +228,7 @@ void ofApp::dragEvent(ofDragInfo info) {
 						grids.push_back(newGrid);
 				}
 			}
-			else if (info.files[i].substr(info.files[i].size() - 3) == "vol") {
+			else if (filetype == "vol") {
 				loadVol(info.files[i]);
 			}
 
@@ -294,19 +296,26 @@ void ofApp::mouseReleased(int x, int y, int button){
 			ofVec3f srfPt;
 			float t, minT = 9e9;
 			VDB::Ptr sel = nullptr;
+			bool unsel = true;
+			if (ofGetKeyPressed(OF_KEY_CONTROL)) {
+				unsel = false;
+			}
 			for (auto g : grids) {
-				if (g->intersectRay(sPt, (sPt2 - sPt), srfPt, t)) {
-					if (t < minT) {
-						minT = t;
-						sel = g;
+				bool gsel = isSelected(g);
+				if (gsel != unsel) {
+					if (g->intersectRay(sPt, (sPt2 - sPt), srfPt, t)) {
+
+						if (t < minT) {
+							minT = t;
+							sel = g;
+						}
 					}
 				}
 			}
+
 			if (ofGetKeyPressed(OF_KEY_SHIFT)) {
 				if (sel != nullptr) {
-					if (!isSelected(sel)) {
-						selected.push_back(sel);
-					}
+					selected.push_back(sel);
 				}
 			}
 			else if (ofGetKeyPressed(OF_KEY_CONTROL)) {
@@ -388,6 +397,9 @@ void ofApp::buttonEvent(ofxDatGuiButtonEvent e) {
 	else if (e.target->is("blur")) {
 		doLaplacianBlur();
 	}
+	else if (e.target->is("taubin")) {
+		doTaubin();
+	}
 	else if (e.target->is("save")) {
 		saveVDB(gui->getTextInput("filename")->getText());
 	}
@@ -449,7 +461,14 @@ void ofApp::doLaplacianBlur() {
 	}
 }
 
+void ofApp::doTaubin() {
+	for (auto g : selected) {
+		g->taubin();
+	}
+}
+
 void ofApp::saveVDB(string filename) {
+	if (filename.size() < 5) return;
 	openvdb::io::File file(ofToDataPath(filename));
 	// Add the grid pointer to a container.
 	openvdb::GridPtrVec sgrids;
@@ -461,6 +480,7 @@ void ofApp::saveVDB(string filename) {
 }
 
 void ofApp::saveMesh(string filename) {
+	if (filename.size() < 5) return;
 	ofMesh m;
 	cout << filename << endl;
 	for (auto g : selected) {

@@ -86,9 +86,21 @@ void VDB::doUnion(VDB & vdb) {
 }
 
 void VDB::doDifference(VDB & vdb) {
-	//copy
-	FloatGrid::Ptr cGrid = FloatGrid::create();
-	cGrid = vdb.grid->deepCopy();
+	const math::Transform
+		&sourceXform = vdb.grid->transform(),
+		&targetXform = grid->transform();
+	FloatGrid::Ptr cGrid = createLevelSet<FloatGrid>(grid->voxelSize()[0]);
+	cGrid->transform() = grid->transform();
+	// Compute a source grid to target grid transform.
+	openvdb::Mat4R xform =
+		sourceXform.baseMap()->getAffineMap()->getMat4() *
+		targetXform.baseMap()->getAffineMap()->getMat4().inverse();
+	// Create the transformer.
+	openvdb::tools::GridTransformer transformer(xform);
+
+	// Resample using trilinear interpolation.
+	transformer.transformGrid<openvdb::tools::BoxSampler, openvdb::FloatGrid>(
+		*vdb.grid, *cGrid);
 	csgDifference(*grid, *cGrid);
 	isUpdated = false;
 }
@@ -100,9 +112,22 @@ void VDB::doUnion(FloatGrid::Ptr vdb) {
 
 void VDB::doIntersect(VDB & vdb) {
 	//copy
-	FloatGrid::Ptr cGrid = FloatGrid::create();
-	cGrid = vdb.grid->deepCopy(); 
-	csgIntersection(*grid, *(vdb.grid));
+	const math::Transform
+		&sourceXform = vdb.grid->transform(),
+		&targetXform = grid->transform();
+	FloatGrid::Ptr cGrid = createLevelSet<FloatGrid>(grid->voxelSize()[0]);
+	cGrid->transform() = grid->transform();
+	// Compute a source grid to target grid transform.
+	openvdb::Mat4R xform =
+		sourceXform.baseMap()->getAffineMap()->getMat4() *
+		targetXform.baseMap()->getAffineMap()->getMat4().inverse();
+	// Create the transformer.
+	openvdb::tools::GridTransformer transformer(xform);
+
+	// Resample using trilinear interpolation.
+	transformer.transformGrid<openvdb::tools::BoxSampler, openvdb::FloatGrid>(
+		*vdb.grid, *cGrid);
+	csgIntersection(*grid, *cGrid);
 	isUpdated = false;
 }
 
@@ -110,6 +135,13 @@ void VDB::blur() {
 	LevelSetFilter<FloatGrid> filter(*grid);
 	//filter.gaussian();
 	filter.laplacian();
+	isUpdated = false;
+}
+
+void VDB::taubin() {
+	LevelSetFilter<FloatGrid> filter(*grid);
+	//filter.gaussian();
+	filter.taubin();
 	isUpdated = false;
 }
 

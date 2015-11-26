@@ -66,4 +66,5 @@ class ofApp : public ofBaseApp{
 		void saveVDB(string filename);
 		void saveMesh(string filename);
 		void doLaplacianBlur();
+		void doTaubin();
 };

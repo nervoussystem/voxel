@@ -13,6 +13,11 @@ class ofApp : public ofBaseApp{
 		Gumball gumball;
 		VDB grid;
 		VDB mask;
+		bool maskMode;
+		float maskRadius;
+		bool isHover;
+		ofVec3f intersectionPt;
+		
 
 		list<VDB::Ptr> grids;
 		list<VDB::Ptr> selected;
@@ -26,6 +31,8 @@ class ofApp : public ofBaseApp{
 		void loadLines(string filename);
 		void loadVol(string filename);
 		bool isSelected(VDB::Ptr g);
+
+		void colorByMask();
 
 		void doDelete();
 
@@ -41,6 +48,7 @@ class ofApp : public ofBaseApp{
 		ofxButton saveButton;
 		ofxButton exportButton;
 		
+		ofVec3f selectScreen(float x, float y, VDB::Ptr & out, bool(ofApp::*selFunc)(VDB::Ptr));
 		void setupGui();
 		bool isMouseClick;
 		
@@ -67,4 +75,9 @@ class ofApp : public ofBaseApp{
 		void saveMesh(string filename);
 		void doLaplacianBlur();
 		void doTaubin();
+
+		bool nullSelect(VDB::Ptr g) { return true; }
+		bool getUnselect(VDB::Ptr g) { return !isSelected(g); }
+		bool getSelect(VDB::Ptr g) { return isSelected(g); }
+
 };

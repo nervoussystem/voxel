@@ -7,6 +7,10 @@ void ofApp::setup(){
 	gumball.setCamera(cam);
 	ofAddListener(gumball.gumballEvent, this, &ofApp::gumballEvent);
 	resolution = .3;
+	maskMode = true;
+	maskRadius = 10;
+	mask.grid->setGridClass(openvdb::v3_1_0::GridClass::GRID_FOG_VOLUME);
+	isHover = false;
 	setupGui();
 }
 
@@ -28,7 +32,8 @@ void ofApp::draw(){
 	ofBackground(255);
 	cam.begin();
 	ofEnableDepthTest();
-	ofEnableLighting();
+	//ofEnableLighting();
+	ofEnableAlphaBlending();
 	ofLight light0;
 	light0.enable();
 	ofSetColor(100);
@@ -44,6 +49,16 @@ void ofApp::draw(){
 	ofDisableDepthTest();
 	ofDisableLighting();
 	gumball.draw();
+
+	if (maskMode) {
+		if (isHover) {
+			ofSetColor(200, 200, 200,100);
+			ofPushMatrix();
+			ofTranslate(intersectionPt);
+			ofDrawSphere(maskRadius);
+			ofPopMatrix();
+		}
+	}
 
 	cam.end();
 
@@ -162,7 +177,7 @@ void ofApp::setupGui() {
 	gui->addButton("export mesh");
 
 	resolutionSlider->bind(&resolution, 0, 2);
-	offsetSlider->bind(&offsetAmt,-5,5);
+	offsetSlider->bind(&offsetAmt,-15,15);
 	
 	gui->onButtonEvent(this, &ofApp::buttonEvent);
 	/*
@@ -270,14 +285,37 @@ void ofApp::keyPressed(int key){
 void ofApp::keyReleased(int key){
 }
 
+
 //--------------------------------------------------------------
 void ofApp::mouseMoved(int x, int y ){
 	isMouseClick = false;
+	if (maskMode) {
+		VDB::Ptr g;
+		ofVec3f selPt = selectScreen(x, y, g, &ofApp::nullSelect);
+		if (g != nullptr) {
+			intersectionPt = selPt;
+			isHover = true;
+		}
+		else {
+			isHover = false;
+		}
+	}
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button){
 	isMouseClick = false;
+	if (button == OF_MOUSE_BUTTON_1) {
+		VDB::Ptr g;
+		ofVec3f selPt = selectScreen(x, y, g, &ofApp::nullSelect);
+		if (g != nullptr) {
+			intersectionPt = selPt;
+			isHover = true;
+			mask.rasterSphere(selPt, maskRadius, 1);
+			colorByMask();
+		}
+	}
+	
 }
 
 //--------------------------------------------------------------
@@ -290,27 +328,12 @@ void ofApp::mouseReleased(int x, int y, int button){
 	if(gui->hitTest(ofPoint(x,y))) return;
 	if (isMouseClick) {
 		if (button == OF_MOUSE_BUTTON_1) {
-			ofVec2f mousePt(x, y);
-			ofVec3f sPt = cam.screenToWorld(ofVec3f(mousePt.x, mousePt.y, -.9));
-			ofVec3f sPt2 = cam.screenToWorld(ofVec3f(mousePt.x, mousePt.y, .9));
-			ofVec3f srfPt;
-			float t, minT = 9e9;
 			VDB::Ptr sel = nullptr;
-			bool unsel = true;
 			if (ofGetKeyPressed(OF_KEY_CONTROL)) {
-				unsel = false;
+				selectScreen(x, y, sel, &ofApp::getSelect);	
 			}
-			for (auto g : grids) {
-				bool gsel = isSelected(g);
-				if (gsel != unsel) {
-					if (g->intersectRay(sPt, (sPt2 - sPt), srfPt, t)) {
-
-						if (t < minT) {
-							minT = t;
-							sel = g;
-						}
-					}
-				}
+			else {
+				selectScreen(x, y, sel, &ofApp::getUnselect);
 			}
 
 			if (ofGetKeyPressed(OF_KEY_SHIFT)) {
@@ -344,6 +367,29 @@ void ofApp::mouseReleased(int x, int y, int button){
 	}
 }
 
+ofVec3f ofApp::selectScreen(float x, float y, VDB::Ptr & out, bool(ofApp::*selFunc)(VDB::Ptr)) {
+	ofVec2f mousePt(x, y);
+	ofVec3f sPt = cam.screenToWorld(ofVec3f(mousePt.x, mousePt.y, -.9));
+	ofVec3f sPt2 = cam.screenToWorld(ofVec3f(mousePt.x, mousePt.y, .9));
+	ofVec3f srfPt, selPt;
+	float t, minT = 9e9;
+	VDB::Ptr sel = nullptr;
+	for (auto g : grids) {
+		if ((this->*selFunc)(g)) {
+			if (g->intersectRay(sPt, (sPt2 - sPt), srfPt, t)) {
+
+				if (t < minT) {
+					minT = t;
+					sel = g;
+					selPt = srfPt;
+				}
+			}
+		}
+	}
+	out = sel;
+	return selPt;
+}
+
 void ofApp::gumballEvent(GumballInfo & args) {
 	for (auto g : selected) {
 		if (args.type == GumballEventType::GUMBALL_TRANSLATE) {
@@ -357,6 +403,30 @@ void ofApp::gumballEvent(GumballInfo & args) {
 	}
 }
 
+void ofApp::colorByMask() {
+	ofColor c1(120);
+	ofColor c2(255, 0, 0);
+	openvdb::FloatGrid::ConstAccessor accessor = mask.grid->getConstAccessor();
+	// Instantiate the GridSampler template on the accessor type and on
+	// a box sampler for accelerated trilinear interpolation.
+	openvdb::tools::GridSampler<openvdb::FloatGrid::ConstAccessor, openvdb::tools::BoxSampler>
+		sampler(accessor, mask.grid->transform());
+
+	//openvdb::tools::GridSampler<openvdb::FloatGrid, openvdb::tools::BoxSampler> sampler(*mask.grid);
+	for (auto grid : grids) {
+		ofVboMesh & mesh = grid->mesh;
+		mesh.enableColors();
+		vector<ofFloatColor> & colors = mesh.getColors();
+		colors.resize(mesh.getNumVertices());
+		for (int i = 0, l = mesh.getNumVertices(); i < l; ++i) {
+			//float v = mask.samplePt(grid->mesh.getVertex(i));
+			ofVec3f pt = mesh.getVertex(i);
+			float v = sampler.wsSample(openvdb::Vec3R(pt.x, pt.y, pt.z));
+			colors[i] = c1.getLerped(c2, v);
+		}
+
+	}
+}
 //--------------------------------------------------------------
 void ofApp::mouseEntered(int x, int y){
 
@@ -451,7 +521,7 @@ void ofApp::doDifference() {
 void ofApp::doOffset() {
 	//float offsetAmt = offsetSlider.getParameter().cast<float>().get();
 	for(auto g : selected) {
-		g->offset(offsetAmt);
+		g->offset(offsetAmt, mask);
 	}
 }
 

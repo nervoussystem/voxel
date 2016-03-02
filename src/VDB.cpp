@@ -57,7 +57,16 @@ void VDB::loadMesh(ofMesh & toLoad, float resolution, int band) {
 void VDB::offset(float amt) {
 	LevelSetFilter<FloatGrid> filter(*grid);
 	filter.offset(amt);
+	filter.normalize();
+	filter.prune();
+	isUpdated = false;
+}
 
+void VDB::offset(float amt, VDB & mask) {
+	LevelSetFilter<FloatGrid> filter(*grid);
+	filter.offset(amt, &*(mask.grid));
+	filter.normalize();
+	filter.prune();
 	isUpdated = false;
 }
 
@@ -163,7 +172,7 @@ void VDB::floodFill() {
 void VDB::updateMesh() {
 	
 	//openvdb::tools::VolumeToMesh mesher(grid->getGridClass() == openvdb::GRID_LEVEL_SET ? 0.0 : 0.01);
-	openvdb::tools::VolumeToMesh mesher(isovalue);
+	openvdb::tools::VolumeToMesh mesher(0);
 	mesher(*grid);
 
 	mesh.clear();
@@ -246,7 +255,7 @@ void VDB::save(string filename) {
 }
 
 VDB::VDB() {
-	grid = FloatGrid::create(1.2);
+	grid = FloatGrid::create(0.0f);
 	grid->setGridClass(GRID_LEVEL_SET);
 	mesh.enableNormals();
 	isovalue = 0.0;
@@ -379,7 +388,7 @@ bool VDB::intersectRay(const ofVec3f & pt, const ofVec3f & dir, ofVec3f & out) {
 
 bool VDB::intersectRay(const float x, const float y, const float z, const float dx, const float dy, const float dz, float & ox, float &oy, float &oz, float & t) {
 	//if (grid->getGridClass() == GRID_LEVEL_SET) {
-		LevelSetRayIntersector<FloatGrid> intersector(*grid, isovalue);
+		LevelSetRayIntersector<FloatGrid> intersector(*grid, 0);
 		Vec3R pt;
 		Real t0;
 		bool val = intersector.intersectsWS(math::Ray<Real>(Vec3R(x, y, z), Vec3R(dx, dy, dz)), pt, t0);
@@ -423,7 +432,7 @@ struct MatAdd {
 
 void VDB::setThreshold(float thresh) {
 
-	//foreach(grid->beginValueOn(), MatAdd(thresh-isovalue));
+	foreach(grid->beginValueOn(), MatAdd(thresh-isovalue));
 	isovalue = thresh;
 	isUpdated = false;
 }
@@ -464,4 +473,38 @@ void VDB::loadVol(ifstream & buf, int w, int h, int d, float resolution) {
 	trans.preScale(resolution);
 	grid->transform() = trans;
 	isUpdated = false;
+}
+
+float VDB::samplePt(const ofVec3f & pt) const {
+	GridSampler<FloatGrid, BoxSampler> sampler(*grid);
+	return sampler.wsSample(Vec3R(pt.x, pt.y, pt.z));
+}
+
+void VDB::rasterSphere(ofVec3f center, float rad, float val) {
+	FloatGrid::Accessor acc = grid->getAccessor();
+	//const SdfT dx = SdfT(mParent.mDx), w = SdfT(mParent.mHalfWidth);
+	const float max = rad;// maximum distance in voxel units
+	const Coord a(math::Floor(center.x - max), math::Floor(center.y - max), math::Floor(center.z - max));
+	const Coord b(math::Ceil(center.x + max), math::Ceil(center.y + max), math::Ceil(center.z + max));
+	const float max2 = math::Pow2(max);//square of maximum distance in voxel units
+	//const float min2 = math::Pow2(math::Max(0, rad));//square of minimum distance
+	float v;
+	for (Coord c = a; c.x() <= b.x(); ++c.x()) {
+		float x2 = math::Pow2(c.x() - center.x);
+		for (c.y() = a.y(); c.y() <= b.y(); ++c.y()) {
+			float x2y2 = x2 + math::Pow2(c.y() - center.y);
+			for (c.z() = a.z(); c.z() <= b.z(); ++c.z()) {
+				float x2y2z2 = x2y2 + math::Pow2(c.z() - center.z);//square distance from c to P
+				if (x2y2z2 >= max2)
+					continue;//outside narrow band of the particle or inside existing level set
+				//if (x2y2z2 <= min2) {//inside narrow band of the particle.
+				//	acc.setValueOff(c, inside);
+				//	continue;
+				//}
+				// convert signed distance from voxel units to world units
+				//const ValueT d=dx*(math::Sqrt(x2y2z2) - R);
+				acc.setValue(c, val);
+			}//end loop over z
+		}//end loop over y
+	}//end loop over x
 }

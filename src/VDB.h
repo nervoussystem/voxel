@@ -1,6 +1,8 @@
 #pragma once
 
 #include <openvdb/openvdb.h>
+
+#include <openvdb/tools/GridTransformer.h>
 #include "ofVboMesh.h"
 #include "ofMatrix4x4.h"
 
@@ -17,6 +19,7 @@ public:
 	void loadVol(ifstream & buf, int w, int h , int d, float resolution = 1.0);
 	void clear();
 	void offset(float amt);
+	void offset(float amt, VDB & mask);
 	void load(string filename);
 	void doUnion(VDB & vdb);
 	void doDifference(VDB & vdb);
@@ -42,10 +45,13 @@ public:
 	void draw();
 	void save(string filename);
 	void toEmber(string filename);
+	float samplePt(const ofVec3f & pt) const;
 
 	ofMesh toMesh();
 
 	VDB();
 	VDB(ofMesh & m, float resolution = 1.0);
 	VDB(const VDB & vdb);
+
+	void rasterSphere(ofVec3f center, float rad, float val);
 };

@@ -147,6 +147,13 @@ void VDB::blur() {
 	isUpdated = false;
 }
 
+void VDB::smooth() {
+	LevelSetFilter<FloatGrid> filter(*grid);
+	//filter.gaussian();
+	filter.meanCurvature();
+	isUpdated = false;
+}
+
 void VDB::taubin() {
 	LevelSetFilter<FloatGrid> filter(*grid);
 	//filter.gaussian();
@@ -255,7 +262,7 @@ void VDB::save(string filename) {
 }
 
 VDB::VDB() {
-	grid = FloatGrid::create(0.0f);
+	grid = FloatGrid::create(1.2f);
 	grid->setGridClass(GRID_LEVEL_SET);
 	mesh.enableNormals();
 	isovalue = 0.0;

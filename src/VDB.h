@@ -34,6 +34,7 @@ public:
 	bool intersectRay(const float x, const float y, const float z, const float dx, const float dy, const float dz, float & ox, float &oy, float &oz, float &t);
 	bool intersectRay(const ofVec3f & pt, const ofVec3f & dir, ofVec3f & out, float &t);
 	void blur();
+	void smooth();
 	void taubin();
 
 	void updateMesh();

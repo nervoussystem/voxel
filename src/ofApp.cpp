@@ -52,11 +52,11 @@ void ofApp::draw(){
 
 	if (maskMode) {
 		if (isHover) {
-			ofSetColor(200, 200, 200,100);
-			ofPushMatrix();
-			ofTranslate(intersectionPt);
-			ofDrawSphere(maskRadius);
-			ofPopMatrix();
+			//ofSetColor(200, 200, 200,100);
+			//ofPushMatrix();
+			//ofTranslate(intersectionPt);
+			//ofDrawSphere(maskRadius);
+			//ofPopMatrix();
 		}
 	}
 
@@ -168,6 +168,7 @@ void ofApp::setupGui() {
 	ofxDatGuiSlider * offsetSlider = gui->addSlider("offset amt", -10, 10);
 	gui->addButton("offset");
 	gui->addButton("blur");
+	gui->addButton("smooth");
 	gui->addButton("taubin");
 	gui->addBreak();
 	gui->addLabel("saving");
@@ -268,16 +269,6 @@ void ofApp::keyPressed(int key){
 	}
 	else if (key == OF_KEY_DEL) {
 		doDelete();
-	}
-	else if (key == OF_KEY_LEFT) {
-		for (auto g : grids) {
-			g->setThreshold(g->isovalue-.5);
-		}
-	}
-	else if (key == OF_KEY_RIGHT) {
-		for (auto g : grids) {
-			g->setThreshold(g->isovalue + .5);
-		}
 	}
 }
 
@@ -467,6 +458,9 @@ void ofApp::buttonEvent(ofxDatGuiButtonEvent e) {
 	else if (e.target->is("blur")) {
 		doLaplacianBlur();
 	}
+	else if (e.target->is("smooth")) {
+		doSmooth();
+	}
 	else if (e.target->is("taubin")) {
 		doTaubin();
 	}
@@ -528,6 +522,13 @@ void ofApp::doOffset() {
 void ofApp::doLaplacianBlur() {
 	for (auto g : selected) {
 		g->blur();
+	}
+}
+
+void ofApp::doSmooth() {
+	for (auto g : selected) {
+		for (int i = 0; i < 10;++i)
+			g->smooth();
 	}
 }
 

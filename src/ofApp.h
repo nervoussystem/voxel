@@ -4,7 +4,27 @@
 #include "ofxGui.h"
 #include "ofxDatGui.h"
 #include "VDB.h"
+#include "Meshing.h"
 #include "Gumball.h"
+
+struct MeshOp {
+	string name;
+	VDB::Ptr ptr;
+	float val;
+	MeshOp() {
+
+	}
+	MeshOp(string _name, VDB::Ptr _ptr = nullptr) {
+		name = _name;
+		ptr = _ptr;
+	}
+
+	MeshOp(string _name, float _val) {
+		name = _name;
+		ptr = nullptr;
+		val = _val;
+	}
+};
 
 class ofApp : public ofBaseApp{
 
@@ -17,12 +37,14 @@ class ofApp : public ofBaseApp{
 		float maskRadius;
 		bool isHover;
 		ofVec3f intersectionPt;
-		
+		float maxTriangle;
+		float maxError;
 
 		list<VDB::Ptr> grids;
 		list<VDB::Ptr> selected;
 		stack<list<VDB *> > state;
 
+		vector<MeshOp> operations;
 		float resolution;
 		float offsetAmt;
 		void setup();
@@ -77,6 +99,9 @@ class ofApp : public ofBaseApp{
 		void doSmooth();
 		void doTaubin();
 
+		void process(string filename);
+		ofMesh process(VDB::Ptr grid);
+		void doOp(VDB::Ptr grid, MeshOp & op);
 		bool nullSelect(VDB::Ptr g) { return true; }
 		bool getUnselect(VDB::Ptr g) { return !isSelected(g); }
 		bool getSelect(VDB::Ptr g) { return isSelected(g); }

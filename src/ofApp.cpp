@@ -7,6 +7,8 @@ void ofApp::setup(){
 	gumball.setCamera(cam);
 	ofAddListener(gumball.gumballEvent, this, &ofApp::gumballEvent);
 	resolution = .3;
+	maxTriangle = .4;
+	maxError = .2;
 	maskMode = true;
 	maskRadius = 10;
 	mask.grid->setGridClass(openvdb::v3_1_0::GridClass::GRID_FOG_VOLUME);
@@ -172,12 +174,18 @@ void ofApp::setupGui() {
 	gui->addButton("taubin");
 	gui->addBreak();
 	gui->addLabel("saving");
+	ofxDatGuiSlider * triSlider = gui->addSlider("max triangle", 0, 2);
+	ofxDatGuiSlider * errorSlider = gui->addSlider("max error", 0, 2);
 	gui->addTextInput("filename");
-	
+	gui->addButton("process");
 	gui->addButton("save");
 	gui->addButton("export mesh");
+	gui->addButton("clear ops");
+	gui->addFolder("operations");
 
 	resolutionSlider->bind(&resolution, 0, 2);
+	triSlider->bind(&maxTriangle, 0, 2);
+	errorSlider->bind(&maxError, 0, 2);
 	offsetSlider->bind(&offsetAmt,-15,15);
 	
 	gui->onButtonEvent(this, &ofApp::buttonEvent);
@@ -226,7 +234,8 @@ void ofApp::dragEvent(ofDragInfo info) {
 					grids.push_back(newGrid);
 				}
 			} else if (filetype == "csv") {
-				loadLines(info.files[i]);
+				//loadLines(info.files[i]);
+				process(info.files[i]);
 				//grid.doDifference(subBox);
 				//grid.updateMesh();
 				//grid.mesh.save(info.files[i].substr(0,info.files[i].size() - 3) + "ply");
@@ -246,6 +255,9 @@ void ofApp::dragEvent(ofDragInfo info) {
 			}
 			else if (filetype == "vol") {
 				loadVol(info.files[i]);
+			}
+			else {
+				process(info.files[i]);
 			}
 
 		}
@@ -443,32 +455,64 @@ void ofApp::resolutionChanged(float & val) {
 }
 
 void ofApp::buttonEvent(ofxDatGuiButtonEvent e) {
-	if (e.target->is("union")) {
-		doUnion();
-	}
-	else if (e.target->is("intersection")) {
-		doIntersection();
-	}
-	else if (e.target->is("difference")) {
-		doDifference();
-	}
-	else if (e.target->is("offset")) {
-		doOffset();
-	}
-	else if (e.target->is("blur")) {
-		doLaplacianBlur();
-	}
-	else if (e.target->is("smooth")) {
-		doSmooth();
-	}
-	else if (e.target->is("taubin")) {
-		doTaubin();
-	}
-	else if (e.target->is("save")) {
-		saveVDB(gui->getTextInput("filename")->getText());
-	}
-	else if (e.target->is("export mesh")) {
-		saveMesh(gui->getTextInput("filename")->getText());
+	if (ofGetKeyPressed(OF_KEY_CONTROL)) {
+		if (e.target->is("union")) {
+			for(auto sel : selected) operations.push_back(MeshOp("union", sel));
+			gui->getFolder("operations")->addLabel("union");
+		}
+		else if (e.target->is("difference")) {
+			for (auto sel : selected) operations.push_back(MeshOp("difference", sel));
+			gui->getFolder("operations")->addLabel("difference");
+		}
+		else if (e.target->is("offset")) {
+			operations.push_back(MeshOp("offset", 0));
+			gui->getFolder("operations")->addLabel("offset");
+		}
+		else if (e.target->is("blur")) {
+			operations.push_back(MeshOp("blur"));
+			gui->getFolder("operations")->addLabel("blur");
+
+		}
+		else if (e.target->is("smooth")) {
+			operations.push_back(MeshOp("smooth"));
+			gui->getFolder("operations")->addLabel("smooth");
+
+		}
+	} else {
+		if (e.target->is("union")) {
+			doUnion();
+		}
+		else if (e.target->is("intersection")) {
+			doIntersection();
+		}
+		else if (e.target->is("difference")) {
+			doDifference();
+		}
+		else if (e.target->is("offset")) {
+			doOffset();
+		}
+		else if (e.target->is("blur")) {
+			doLaplacianBlur();
+		}
+		else if (e.target->is("smooth")) {
+			doSmooth();
+		}
+		else if (e.target->is("taubin")) {
+			doTaubin();
+		}
+		else if (e.target->is("save")) {
+			saveVDB(gui->getTextInput("filename")->getText());
+		}
+		else if (e.target->is("process")) {
+			process(gui->getTextInput("filename")->getText());
+		}
+		else if (e.target->is("export mesh")) {
+			saveMesh(gui->getTextInput("filename")->getText());
+		}
+		else if (e.target->is("clear ops")) {
+			operations.clear();
+			gui->getFolder("operations")->children.clear();
+		}
 	}
 }
 
@@ -563,4 +607,43 @@ void ofApp::saveMesh(string filename) {
 		}
 	}
 	m.save(filename);
+}
+
+void ofApp::process(string filename) {
+	string filetype = ofToLower(filename.substr(filename.size() - 3));
+	if (filetype == "csv" || filetype == "txt") {
+		loadLines(filename);
+		ofMesh mesh = process(grids.back());
+		mesh.save(filename.substr(0, filename.size() - 3) + "obj");
+		//grids.erase(grids.end()--);
+	}
+}
+
+void ofApp::doOp(VDB::Ptr grid, MeshOp & op) {
+	if (op.name == "smooth") {
+		for (int i = 0; i < 10;++i) grid->smooth();
+	}
+	else if (op.name == "blur") {
+		grid->blur();
+	}
+	else if (op.name == "union") {
+		grid->doUnion(*op.ptr);
+	}
+	else if (op.name == "difference") {
+		grid->doDifference(*op.ptr);
+
+	}
+	else if (op.name == "offset") {
+		grid->offset(op.val);
+	}
+}
+ofMesh ofApp::process(VDB::Ptr grid) {
+	//operations
+	//do operations
+	for (auto & op : operations) {
+		doOp(grid, op);
+	}
+	ofMesh out;
+	buildMesh(*grid, out, maxTriangle, maxError);
+	return out;
 }

@@ -85,3 +85,4 @@ icon.rc
 voxel.sdf
 *.vcxproj
 voxel.vcxproj.filters
+voxel.vcxproj

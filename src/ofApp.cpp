@@ -3,6 +3,11 @@
 
 float volume;
 float defaultThickness = 0.3f;
+float targetVolume = 38.5;
+float volumeEps = 0.5;
+
+bool targetingVolume = true;
+float radius = .25;
 
 float computeVolume(ofMesh & mesh) {
 	float volume = 0;
@@ -109,6 +114,7 @@ void ofApp::loadLines(string filename) {
 	float cthick;
 	VDB::Ptr newGrid(new VDB());
 	int count = 0;
+	resolution = radius *1.2/ 3.0;
 	while (getline(in, cLine)) {
 		stringstream ss(cLine);
 		int num = 0;
@@ -144,7 +150,7 @@ void ofApp::loadLines(string filename) {
 			float len = v3.lengthSqr();
 			//cthick = defaultThickness*0.5;
 			if (len > 1e-8 && len < 100) {
-				openvdb::tools::LevelSetCapsule<openvdb::FloatGrid> factory(cthick, v1, v2);
+				openvdb::tools::LevelSetCapsule<openvdb::FloatGrid> factory(radius, v1, v2);
 				factory.mGrid = newGrid->grid;
 				factory.rasterCapsule(resolution, 3);
 			}
@@ -200,6 +206,7 @@ void ofApp::setupGui() {
 	gui->addLabel("saving");
 	ofxDatGuiSlider * triSlider = gui->addSlider("max triangle", 0, 2);
 	ofxDatGuiSlider * errorSlider = gui->addSlider("max error", 0, 2);
+	ofxDatGuiSlider * targetSlider = gui->addSlider("target volume", 0, 200);
 	gui->addTextInput("filename");
 	gui->addButton("process");
 	gui->addButton("save");
@@ -211,6 +218,7 @@ void ofApp::setupGui() {
 	triSlider->bind(maxTriangle, 0, 2);
 	errorSlider->bind(maxError, 0, 2);
 	offsetSlider->bind(offsetAmt,-15,15);
+	targetSlider->bind(targetVolume, 0, 200);
 	
 	gui->onButtonEvent(this, &ofApp::buttonEvent);
 	/*
@@ -640,14 +648,26 @@ void ofApp::process(string filename) {
 		defaultThickness = .3;
 		//while (defaultThickness <= .71) {
 			loadLines(filename);
+			for (int i = 0; i < 5; ++i) grids.back()->smooth();
+			grids.back()->updateMesh();
+			volume = computeVolume(grids.back()->mesh);
+			while (abs(volume - targetVolume) > volumeEps) {
+				radius *= (sqrt(targetVolume / volume)-1.0)*0.75+1.0;
+				grids.erase(--grids.end());
+				loadLines(filename);
+				for (int i = 0; i < 8; ++i) grids.back()->smooth();
+				grids.back()->updateMesh();
+				volume = computeVolume(grids.back()->mesh);
+			}
 			//ofMesh mesh = process(grids.back());
 			//mesh.save(filename.substr(0, filename.size() - 3) + "obj");
 			//grids.erase(grids.end()--);
 			ofMesh mesh;
 			//for (int i = 0; i < 10; ++i) grids.back()->smooth();
-			buildMesh(*grids.back(), mesh, .4, 0.01);
+			buildMesh(*grids.back(), mesh, .4, 0.003);
 			stringstream ss;
-			ss << filename.substr(0, filename.size() - 4) << "_T" << (int)(defaultThickness * 1000) << ".obj";
+			volume = computeVolume(mesh);
+			ss << filename.substr(0, filename.size() - 4) << "_T" << (int)(radius * 1000) << "_V" << ((int)(volume*10))/10.0 << ".obj";
 			mesh.save(ss.str());
 			//grids.erase(grids.end()--);
 			defaultThickness += 0.05;

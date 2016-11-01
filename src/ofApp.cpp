@@ -1,6 +1,25 @@
 #include "ofApp.h"
 #include "LevelSetCapsule.h"
 
+float volume;
+float defaultThickness = 0.3f;
+
+float computeVolume(ofMesh & mesh) {
+	float volume = 0;
+	for (int i = 0; i < mesh.getNumIndices();) {
+		int i1 = mesh.getIndex(i++);
+		int i2 = mesh.getIndex(i++);
+		int i3 = mesh.getIndex(i++);
+
+		ofVec3f p1 = mesh.getVertex(i1);
+		ofVec3f p2 = mesh.getVertex(i2);
+		ofVec3f p3 = mesh.getVertex(i3);
+
+		volume += (p1.y*p2.z - p1.z*p2.y)*p3.x + (p1.z*p2.x - p1.x*p2.z)*p3.y + (p1.x*p2.y - p1.y*p2.x)*p3.z;
+	}
+	return volume / 6;
+}
+
 //--------------------------------------------------------------
 void ofApp::setup(){
 	openvdb::initialize();
@@ -39,6 +58,8 @@ void ofApp::draw(){
 	ofLight light0;
 	light0.enable();
 	ofSetColor(100);
+	bool doVolume = false;
+	if (grids.size() > 0) doVolume = !grids.front()->isUpdated;
 	for (auto g : grids) {
 		if (isSelected(g)) {
 			ofSetColor(200, 0, 0);
@@ -48,6 +69,7 @@ void ofApp::draw(){
 		}
 		g->draw();
 	}
+	if (doVolume) volume = computeVolume(grids.front()->mesh);
 	ofDisableDepthTest();
 	ofDisableLighting();
 	gumball.draw();
@@ -64,6 +86,7 @@ void ofApp::draw(){
 
 	cam.end();
 
+	ofDrawBitmapString(volume, ofVec2f(500, 20));
 }
 
 bool ofApp::isSelected(VDB::Ptr g) {
@@ -119,6 +142,7 @@ void ofApp::loadLines(string filename) {
 			}
 			v3 = v2 - v1;
 			float len = v3.lengthSqr();
+			//cthick = defaultThickness*0.5;
 			if (len > 1e-8 && len < 100) {
 				openvdb::tools::LevelSetCapsule<openvdb::FloatGrid> factory(cthick, v1, v2);
 				factory.mGrid = newGrid->grid;
@@ -183,10 +207,10 @@ void ofApp::setupGui() {
 	gui->addButton("clear ops");
 	gui->addFolder("operations");
 
-	resolutionSlider->bind(&resolution, 0, 2);
-	triSlider->bind(&maxTriangle, 0, 2);
-	errorSlider->bind(&maxError, 0, 2);
-	offsetSlider->bind(&offsetAmt,-15,15);
+	resolutionSlider->bind(resolution, 0, 2);
+	triSlider->bind(maxTriangle, 0, 2);
+	errorSlider->bind(maxError, 0, 2);
+	offsetSlider->bind(offsetAmt,-15,15);
 	
 	gui->onButtonEvent(this, &ofApp::buttonEvent);
 	/*
@@ -599,7 +623,8 @@ void ofApp::saveMesh(string filename) {
 	ofMesh m;
 	cout << filename << endl;
 	for (auto g : selected) {
-		g->updateMesh();
+		//g->updateMesh();
+		//buildMesh(*g, m, maxTriangle, maxError);
 		ofIndexType baseIndex = m.getNumVertices();
 		m.addVertices(g->mesh.getVertices());
 		for (auto i : g->mesh.getIndices()) {
@@ -612,10 +637,21 @@ void ofApp::saveMesh(string filename) {
 void ofApp::process(string filename) {
 	string filetype = ofToLower(filename.substr(filename.size() - 3));
 	if (filetype == "csv" || filetype == "txt") {
-		loadLines(filename);
-		ofMesh mesh = process(grids.back());
-		mesh.save(filename.substr(0, filename.size() - 3) + "obj");
-		//grids.erase(grids.end()--);
+		defaultThickness = .3;
+		//while (defaultThickness <= .71) {
+			loadLines(filename);
+			//ofMesh mesh = process(grids.back());
+			//mesh.save(filename.substr(0, filename.size() - 3) + "obj");
+			//grids.erase(grids.end()--);
+			ofMesh mesh;
+			//for (int i = 0; i < 10; ++i) grids.back()->smooth();
+			buildMesh(*grids.back(), mesh, .4, 0.01);
+			stringstream ss;
+			ss << filename.substr(0, filename.size() - 4) << "_T" << (int)(defaultThickness * 1000) << ".obj";
+			mesh.save(ss.str());
+			//grids.erase(grids.end()--);
+			defaultThickness += 0.05;
+		//}
 	}
 }
 

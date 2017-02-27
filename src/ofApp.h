@@ -52,6 +52,7 @@ class ofApp : public ofBaseApp{
 		void draw();
 		void loadLines(string filename);
 		void loadVol(string filename);
+		VDB::Ptr thickenSrf(ofMesh & mesh, float thickness);
 		bool isSelected(VDB::Ptr g);
 
 		void colorByMask();

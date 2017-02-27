@@ -1,13 +1,17 @@
 #include "ofApp.h"
 #include "LevelSetCapsule.h"
+#include "LevelSetWedge.h"
 
 float volume;
 float defaultThickness = 0.3f;
-float targetVolume = 38.5;
-float volumeEps = 0.5;
+float targetVolume = 13928.9;
+float volumeEps = 100;
 
-bool targetingVolume = true;
-float radius = .25;
+bool targetingVolume = false;
+float surfaceThickness = 1.0;
+bool doThickening = false;
+float radiusScaling = 1.0;
+float minRad;
 
 float computeVolume(ofMesh & mesh) {
 	float volume = 0;
@@ -114,7 +118,49 @@ void ofApp::loadLines(string filename) {
 	float cthick;
 	VDB::Ptr newGrid(new VDB());
 	int count = 0;
-	resolution = radius *1.2/ 3.0;
+	minRad = 9e9;
+	while (getline(in, cLine)) {
+		stringstream ss(cLine);
+		int num = 0;
+		if (cLine.length() > 12) {
+			while (getline(ss, token, ',')) {
+				f = ::atof(token.c_str());
+				switch (num) {
+				case 0:
+					v1[0] = f;
+					break;
+				case 1:
+					v1[1] = f;
+					break;
+				case 2:
+					v1[2] = f;
+					break;
+				case 3:
+					v2[0] = f;
+					break;
+				case 4:
+					v2[1] = f;
+					break;
+				case 5:
+					v2[2] = f;
+					break;
+				case 6:
+					cthick = f;
+					break;
+				}
+				num++;
+			}
+			v3 = v2 - v1;
+			minRad = min(cthick*radiusScaling, minRad);
+			//cout << count++ << endl;
+		}
+	}
+
+	in.clear();
+	in.seekg(0);
+
+	resolution = minRad *1.2 / 3.0;
+	cout << minRad << endl;
 	while (getline(in, cLine)) {
 		stringstream ss(cLine);
 		int num = 0;
@@ -150,7 +196,7 @@ void ofApp::loadLines(string filename) {
 			float len = v3.lengthSqr();
 			//cthick = defaultThickness*0.5;
 			if (len > 1e-8 && len < 100) {
-				openvdb::tools::LevelSetCapsule<openvdb::FloatGrid> factory(radius, v1, v2);
+				openvdb::tools::LevelSetCapsule<openvdb::FloatGrid> factory(cthick*radiusScaling, v1, v2);
 				factory.mGrid = newGrid->grid;
 				factory.rasterCapsule(resolution, 3);
 			}
@@ -165,6 +211,33 @@ void ofApp::loadLines(string filename) {
 	newGrid->grid->transform().preScale(resolution);
 	if(!newGrid->grid->empty())
 		grids.push_back(newGrid);	
+}
+
+VDB::Ptr ofApp::thickenSrf(ofMesh & mesh, float thickness) {
+	openvdb::Vec3f v1, v2, v3;
+	VDB::Ptr newGrid(new VDB());
+	for (int i = 0; i < mesh.getNumIndices();) {
+		int i1 = mesh.getIndex(i++);
+		int i2 = mesh.getIndex(i++);
+		int i3 = mesh.getIndex(i++);
+
+		ofVec3f p1 = mesh.getVertex(i1);
+		ofVec3f p2 = mesh.getVertex(i2);
+		ofVec3f p3 = mesh.getVertex(i3);
+
+		v1 = openvdb::Vec3f(p1.x, p1.y, p1.z);
+		v2 = openvdb::Vec3f(p2.x, p2.y, p2.z);
+		v3 = openvdb::Vec3f(p3.x, p3.y, p3.z);
+		openvdb::tools::LevelSetWedge<openvdb::FloatGrid> factory(v1, v2,v3, thickness);
+		factory.mGrid = newGrid->grid;
+		factory.rasterWedge(resolution, 3);
+
+	}
+	newGrid->floodFill();
+	newGrid->isUpdated = false;
+	newGrid->grid->pruneGrid();
+	newGrid->grid->transform().preScale(resolution);
+	return newGrid;
 }
 
 void ofApp::loadVol(string filename) {
@@ -190,6 +263,8 @@ void ofApp::setupGui() {
 	gui = new ofxDatGui(ofxDatGuiAnchor::TOP_LEFT);
 	gui->addHeader(":: VOXELS ::");
 	ofxDatGuiSlider * resolutionSlider = gui->addSlider("resolution", 0, 2);
+	auto thicknessToggle = gui->addToggle("thickening", doThickening);
+	gui->addSlider("thickness", 0, 5)->bind(surfaceThickness);
 	gui->addBreak();
 	gui->addLabel("BOOLEAN");
 	gui->addButton("union");
@@ -206,7 +281,7 @@ void ofApp::setupGui() {
 	gui->addLabel("saving");
 	ofxDatGuiSlider * triSlider = gui->addSlider("max triangle", 0, 2);
 	ofxDatGuiSlider * errorSlider = gui->addSlider("max error", 0, 2);
-	ofxDatGuiSlider * targetSlider = gui->addSlider("target volume", 0, 200);
+	//ofxDatGuiSlider * targetSlider = gui->addSlider("target volume", 0, 200);
 	gui->addTextInput("filename");
 	gui->addButton("process");
 	gui->addButton("save");
@@ -218,31 +293,10 @@ void ofApp::setupGui() {
 	triSlider->bind(maxTriangle, 0, 2);
 	errorSlider->bind(maxError, 0, 2);
 	offsetSlider->bind(offsetAmt,-15,15);
-	targetSlider->bind(targetVolume, 0, 200);
+	//targetSlider->bind(targetVolume, 0, 200);
 	
 	gui->onButtonEvent(this, &ofApp::buttonEvent);
-	/*
-	resolutionSlider.addListener(this, &ofApp::resolutionChanged);
-	unionButton.addListener(this, &ofApp::doUnion);
-	intersectButton.addListener(this, &ofApp::doIntersection);
-	differenceButton.addListener(this, &ofApp::doDifference);
-	offsetButton.addListener(this, &ofApp::doOffset);
-	laplacianBlurButton.addListener(this, &ofApp::doLaplacianBlur);
-	saveButton.addListener(this, &ofApp::saveVDB);
-	exportButton.addListener(this, &ofApp::saveMesh);
-
-	gui.setup();
-	gui.add(resolutionSlider.setup("resolution", resolution, 0.01, 2));
-	gui.add(unionButton.setup("union"));
-	gui.add(intersectButton.setup("intersect"));
-	gui.add(differenceButton.setup("difference"));
-	gui.add(offsetButton.setup("offset"));
-	gui.add(offsetSlider.setup("offset amt", 0, -5, 5));
-	gui.add(laplacianBlurButton.setup("laplacian blur"));
 	
-	gui.add(saveButton.setup("save"));
-	gui.add(exportButton.setup("export mesh"));
-	*/
 }
 
 void ofApp::dragEvent(ofDragInfo info) {
@@ -256,14 +310,27 @@ void ofApp::dragEvent(ofDragInfo info) {
 		for (int i = 0; i < info.files.size();i++) {
 			string filetype = ofToLower(info.files[i].substr(info.files[i].size() - 3));
 			if (filetype == "ply" || filetype == "stl" || filetype == "obj") {
-				ofMesh mesh;
-				cout << info.files[i] << endl;
-				mesh.load(info.files[i]);
-				if (mesh.getNumIndices() > 3) {
-					cout << "vertices " << mesh.getNumVertices() << endl;
-					VDB::Ptr newGrid(new VDB(mesh, resolution));
-					cout << "background " << newGrid->grid->background() << endl;
-					grids.push_back(newGrid);
+				if (doThickening) {
+					ofMesh mesh;
+					cout << info.files[i] << endl;
+					mesh.load(info.files[i]);
+					if (mesh.getNumIndices() > 3) {
+						VDB::Ptr gr = thickenSrf(mesh, surfaceThickness);
+						if (!gr->grid->empty()) {
+							grids.push_back(gr);
+						}
+					}
+				}
+				else {
+					ofMesh mesh;
+					cout << info.files[i] << endl;
+					mesh.load(info.files[i]);
+					if (mesh.getNumIndices() > 3) {
+						cout << "vertices " << mesh.getNumVertices() << endl;
+						VDB::Ptr newGrid(new VDB(mesh, resolution));
+						cout << "background " << newGrid->grid->background() << endl;
+						grids.push_back(newGrid);
+					}
 				}
 			} else if (filetype == "csv") {
 				//loadLines(info.files[i]);
@@ -487,6 +554,7 @@ void ofApp::resolutionChanged(float & val) {
 }
 
 void ofApp::buttonEvent(ofxDatGuiButtonEvent e) {
+	cout << e.target->getName() << endl;
 	if (ofGetKeyPressed(OF_KEY_CONTROL)) {
 		if (e.target->is("union")) {
 			for(auto sel : selected) operations.push_back(MeshOp("union", sel));
@@ -544,6 +612,9 @@ void ofApp::buttonEvent(ofxDatGuiButtonEvent e) {
 		else if (e.target->is("clear ops")) {
 			operations.clear();
 			gui->getFolder("operations")->children.clear();
+		}
+		else if (e.target->is("thickening")) {
+			doThickening = ((ofxDatGuiToggle *)e.target)->getEnabled();
 		}
 	}
 }
@@ -632,12 +703,12 @@ void ofApp::saveMesh(string filename) {
 	cout << filename << endl;
 	for (auto g : selected) {
 		//g->updateMesh();
-		//buildMesh(*g, m, maxTriangle, maxError);
-		ofIndexType baseIndex = m.getNumVertices();
-		m.addVertices(g->mesh.getVertices());
-		for (auto i : g->mesh.getIndices()) {
-			m.addIndex(i + baseIndex);
-		}
+		buildMesh(*g, m, maxTriangle, maxError);
+		//ofIndexType baseIndex = m.getNumVertices();
+		//m.addVertices(m.getVertices());
+		//for (auto i : g->mesh.getIndices()) {
+		//	m.addIndex(i + baseIndex);
+		//}
 	}
 	m.save(filename);
 }
@@ -651,8 +722,8 @@ void ofApp::process(string filename) {
 			for (int i = 0; i < 5; ++i) grids.back()->smooth();
 			grids.back()->updateMesh();
 			volume = computeVolume(grids.back()->mesh);
-			while (abs(volume - targetVolume) > volumeEps) {
-				radius *= (sqrt(targetVolume / volume)-1.0)*0.75+1.0;
+			while (targetingVolume && abs(volume - targetVolume) > volumeEps) {
+				radiusScaling *= (sqrt(targetVolume / volume)-1.0)*0.75+1.0;
 				grids.erase(--grids.end());
 				loadLines(filename);
 				for (int i = 0; i < 8; ++i) grids.back()->smooth();
@@ -664,10 +735,10 @@ void ofApp::process(string filename) {
 			//grids.erase(grids.end()--);
 			ofMesh mesh;
 			//for (int i = 0; i < 10; ++i) grids.back()->smooth();
-			buildMesh(*grids.back(), mesh, .4, 0.003);
+			buildMesh(*grids.back(), mesh, maxTriangle, maxError);
 			stringstream ss;
 			volume = computeVolume(mesh);
-			ss << filename.substr(0, filename.size() - 4) << "_T" << (int)(radius * 1000) << "_V" << ((int)(volume*10))/10.0 << ".obj";
+			ss << filename.substr(0, filename.size() - 4) << "_T" << (int)(minRad * 1000) << "_V" << ((int)(volume*10))/10.0 << ".obj";
 			mesh.save(ss.str());
 			//grids.erase(grids.end()--);
 			defaultThickness += 0.05;

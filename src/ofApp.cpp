@@ -4,10 +4,11 @@
 
 float volume;
 float defaultThickness = 0.3f;
-float targetVolume = 13928.9;
+float targetVolume = 31000;// 13928.9;
 float volumeEps = 100;
 
 bool targetingVolume = false;
+bool autosave = false;
 float surfaceThickness = 1.0;
 bool doThickening = false;
 float radiusScaling = 1.0;
@@ -159,7 +160,7 @@ void ofApp::loadLines(string filename) {
 	in.clear();
 	in.seekg(0);
 
-	resolution = minRad *1.2 / 3.0;
+	resolution = min(resolution,minRad *1.2f / 3.0f);
 	cout << minRad << endl;
 	while (getline(in, cLine)) {
 		stringstream ss(cLine);
@@ -195,7 +196,7 @@ void ofApp::loadLines(string filename) {
 			v3 = v2 - v1;
 			float len = v3.lengthSqr();
 			//cthick = defaultThickness*0.5;
-			if (len > 1e-8 && len < 100) {
+			if (len > 1e-8) {
 				openvdb::tools::LevelSetCapsule<openvdb::FloatGrid> factory(cthick*radiusScaling, v1, v2);
 				factory.mGrid = newGrid->grid;
 				factory.rasterCapsule(resolution, 3);
@@ -286,6 +287,7 @@ void ofApp::setupGui() {
 	gui->addButton("process");
 	gui->addButton("save");
 	gui->addButton("export mesh");
+	gui->addButton("export mesh fast");
 	gui->addButton("clear ops");
 	gui->addFolder("operations");
 
@@ -609,6 +611,9 @@ void ofApp::buttonEvent(ofxDatGuiButtonEvent e) {
 		else if (e.target->is("export mesh")) {
 			saveMesh(gui->getTextInput("filename")->getText());
 		}
+		else if (e.target->is("export mesh fast")) {
+			saveMeshFast(gui->getTextInput("filename")->getText());
+		}
 		else if (e.target->is("clear ops")) {
 			operations.clear();
 			gui->getFolder("operations")->children.clear();
@@ -713,6 +718,22 @@ void ofApp::saveMesh(string filename) {
 	m.save(filename);
 }
 
+
+void ofApp::saveMeshFast(string filename) {
+	if (filename.size() < 5) return;
+	ofMesh m;
+	cout << filename << endl;
+	for (auto g : selected) {
+		g->updateMesh();
+		ofIndexType baseIndex = m.getNumVertices();
+		m.addVertices(g->mesh.getVertices());
+		for (auto i : g->mesh.getIndices()) {
+			m.addIndex(i + baseIndex);
+		}
+	}
+	m.save(filename);
+}
+
 void ofApp::process(string filename) {
 	string filetype = ofToLower(filename.substr(filename.size() - 3));
 	if (filetype == "csv" || filetype == "txt") {
@@ -733,15 +754,17 @@ void ofApp::process(string filename) {
 			//ofMesh mesh = process(grids.back());
 			//mesh.save(filename.substr(0, filename.size() - 3) + "obj");
 			//grids.erase(grids.end()--);
-			ofMesh mesh;
-			//for (int i = 0; i < 10; ++i) grids.back()->smooth();
-			buildMesh(*grids.back(), mesh, maxTriangle, maxError);
-			stringstream ss;
-			volume = computeVolume(mesh);
-			ss << filename.substr(0, filename.size() - 4) << "_T" << (int)(minRad * 1000) << "_V" << ((int)(volume*10))/10.0 << ".obj";
-			mesh.save(ss.str());
-			//grids.erase(grids.end()--);
-			defaultThickness += 0.05;
+			if (autosave) {
+				ofMesh mesh;
+				//for (int i = 0; i < 10; ++i) grids.back()->smooth();
+				buildMesh(*grids.back(), mesh, maxTriangle, maxError);
+				stringstream ss;
+				volume = computeVolume(mesh);
+				ss << filename.substr(0, filename.size() - 4) << "_T" << (int)(minRad * 1000) << "_V" << ((int)(volume * 10)) / 10.0 << ".obj";
+				mesh.save(ss.str());
+				//grids.erase(grids.end()--);
+				defaultThickness += 0.05;
+			}
 		//}
 	}
 }

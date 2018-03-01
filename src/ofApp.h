@@ -96,6 +96,7 @@ class ofApp : public ofBaseApp{
 		void doOffset();
 		void saveVDB(string filename);
 		void saveMesh(string filename);
+		void saveMeshFast(string filename);
 		void doLaplacianBlur();
 		void doSmooth();
 		void doTaubin();

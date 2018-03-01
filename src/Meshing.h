@@ -42,6 +42,14 @@ struct VDBImplicit {
 	VDB vdb;
 
 	const GT::FT operator()(GT::Point_3 pt) const {
+		/*
+		gyroid
+		if (vdb.samplePt(ofVec3f(pt.x(), pt.y(), pt.z())) < 0) {
+			return sin(pt.x())*cos(pt.y()) + sin(pt.y())*cos(pt.z()) + sin(pt.z())*cos(pt.x())-.015;//) { \displaystyle \sin x\cos y + \sin y\cos z + \sin z\cos x = 0 }
+		}
+		else {
+			return 1;
+		}*/
 		return vdb.samplePt(ofVec3f(pt.x(), pt.y(), pt.z()));
 	}
 };
@@ -155,6 +163,7 @@ static void buildMesh(VDB & voxel, ofMesh & mesh, float maxTriangle = .45, float
 			insidePt.x = pt.x();
 			insidePt.y = pt.y();
 			insidePt.z = pt.z();
+			tr.insert(GT::Point_3(pt.x(),pt.y(),pt.z()));
 		}
 	}
 
@@ -168,7 +177,7 @@ static void buildMesh(VDB & voxel, ofMesh & mesh, float maxTriangle = .45, float
 
 	VDBImplicit srfFunc;
 	srfFunc.vdb = voxel;
-	Surface_3 surface(srfFunc, bounding_sphere, 1e-4);
+	Surface_3 surface(srfFunc, bounding_sphere, 1e-5);
 
 	// defining meshing criteria
 	//CGAL::Surface_mesh_default_criteria_3<Tr> criteria(20.,.5,.5); //mesh detail for lamps

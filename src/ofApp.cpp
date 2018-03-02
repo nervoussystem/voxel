@@ -61,6 +61,7 @@ void ofApp::update() {
 //--------------------------------------------------------------
 void ofApp::draw(){
 	ofBackground(255);
+	guiFunc();
 	cam.begin();
 	ofEnableDepthTest();
 	//ofEnableLighting();
@@ -97,6 +98,31 @@ void ofApp::draw(){
 	cam.end();
 
 	ofDrawBitmapString(volume, ofVec2f(500, 20));
+}
+
+void ofApp::guiFunc() {
+	gui.begin();
+	if (ImGui::BeginMainMenuBar())
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			//ShowExampleMenuFile();
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Edit"))
+		{
+			if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
+			if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
+			ImGui::Separator();
+			if (ImGui::MenuItem("Cut", "CTRL+X")) {}
+			if (ImGui::MenuItem("Copy", "CTRL+C")) {}
+			if (ImGui::MenuItem("Paste", "CTRL+V")) {}
+			ImGui::EndMenu();
+		}
+		ImGui::EndMainMenuBar();
+	}
+
+	gui.end();
 }
 
 bool ofApp::isSelected(VDB::Ptr g) {
@@ -261,6 +287,7 @@ void ofApp::loadVol(string filename) {
 }
 
 void ofApp::setupGui() {
+	/*
 	gui = new ofxDatGui(ofxDatGuiAnchor::TOP_LEFT);
 	gui->addHeader(":: VOXELS ::");
 	ofxDatGuiSlider * resolutionSlider = gui->addSlider("resolution", 0, 2);
@@ -298,7 +325,7 @@ void ofApp::setupGui() {
 	//targetSlider->bind(targetVolume, 0, 200);
 	
 	gui->onButtonEvent(this, &ofApp::buttonEvent);
-	
+	*/
 }
 
 void ofApp::dragEvent(ofDragInfo info) {
@@ -429,7 +456,7 @@ void ofApp::mousePressed(int x, int y, int button){
 
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button){
-	if(gui->hitTest(ofPoint(x,y))) return;
+	//if(gui->hitTest(ofPoint(x,y))) return;
 	if (isMouseClick) {
 		if (button == OF_MOUSE_BUTTON_1) {
 			VDB::Ptr sel = nullptr;
@@ -554,7 +581,7 @@ void ofApp::gotMessage(ofMessage msg){
 void ofApp::resolutionChanged(float & val) {
 	resolution = val;
 }
-
+/*
 void ofApp::buttonEvent(ofxDatGuiButtonEvent e) {
 	cout << e.target->getName() << endl;
 	if (ofGetKeyPressed(OF_KEY_CONTROL)) {
@@ -623,7 +650,7 @@ void ofApp::buttonEvent(ofxDatGuiButtonEvent e) {
 		}
 	}
 }
-
+*/
 void ofApp::doUnion() {
 	if (selected.size() > 1) {
 		auto it = selected.begin();

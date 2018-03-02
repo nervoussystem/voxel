@@ -1,8 +1,7 @@
 #pragma once
 
 #include "ofMain.h"
-#include "ofxGui.h"
-#include "ofxDatGui.h"
+#include "ofxImGui.h"
 #include "VDB.h"
 #include "Meshing.h"
 #include "Gumball.h"
@@ -50,6 +49,7 @@ class ofApp : public ofBaseApp{
 		void setup();
 		void update();
 		void draw();
+		void guiFunc();
 		void loadLines(string filename);
 		void loadVol(string filename);
 		VDB::Ptr thickenSrf(ofMesh & mesh, float thickness);
@@ -58,7 +58,9 @@ class ofApp : public ofBaseApp{
 		void colorByMask();
 
 		void doDelete();
-
+		
+		ofxImGui::Gui gui;
+		/*
 		ofxDatGui * gui;
 		//ofxPanel gui;
 		ofxButton unionButton;
@@ -70,7 +72,8 @@ class ofApp : public ofBaseApp{
 		ofxButton laplacianBlurButton;
 		ofxButton saveButton;
 		ofxButton exportButton;
-		
+		*/
+
 		ofVec3f selectScreen(float x, float y, VDB::Ptr & out, bool(ofApp::*selFunc)(VDB::Ptr));
 		void setupGui();
 		bool isMouseClick;

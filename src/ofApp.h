@@ -5,6 +5,7 @@
 #include "VDB.h"
 #include "Meshing.h"
 #include "Gumball.h"
+#include "Object.h"
 
 struct MeshOp {
 	string name;
@@ -41,6 +42,7 @@ class ofApp : public ofBaseApp{
 
 		list<VDB::Ptr> grids;
 		list<VDB::Ptr> selected;
+		list<unique_ptr<MeshObject> > meshes;
 		stack<list<VDB *> > state;
 
 		vector<MeshOp> operations;
@@ -91,7 +93,6 @@ class ofApp : public ofBaseApp{
 		void windowResized(int w, int h);
 		void gotMessage(ofMessage msg);
 
-		void buttonEvent(ofxDatGuiButtonEvent e);
 		void resolutionChanged(float & val);
 		void doUnion();
 		void doIntersection();
@@ -103,6 +104,7 @@ class ofApp : public ofBaseApp{
 		void doLaplacianBlur();
 		void doSmooth();
 		void doTaubin();
+		void loadFile(string filename);
 
 		void process(string filename);
 		ofMesh process(VDB::Ptr grid);

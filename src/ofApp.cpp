@@ -129,7 +129,6 @@ void ofApp::guiFunc() {
 			if (ImGui::MenuItem("Open", "CTRL+O")) {
 				auto result = ofSystemLoadDialog();
 				if (result.bSuccess) {
-					//loadFile(result.filePath);
 					filename = result.filePath;
 					string filetype = ofToLower(filename.substr(filename.size() - 3));
 					if (filetype == "ply" || filetype == "stl" || filetype == "obj") {
@@ -169,7 +168,6 @@ void ofApp::guiFunc() {
 		}
 		ImGui::EndMainMenuBar();
 	}
-	
 
 	ImGui::Begin("tools");
 	ImGui::Text("boolean");
@@ -187,6 +185,7 @@ void ofApp::guiFunc() {
 		doOffset();
 	}
 
+	ImGui::Text("view");
 	if(ImGui::Button("Top")) {
 	}
 	if (ImGui::Button("Left")) {

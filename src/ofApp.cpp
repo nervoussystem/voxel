@@ -14,6 +14,11 @@ bool doThickening = false;
 float radiusScaling = 1.0;
 float minRad;
 
+ofVboMesh loadMesh;
+ofCamera prevCam;
+bool importing = true;
+string filename;
+
 float computeVolume(ofMesh & mesh) {
 	float volume = 0;
 	for (int i = 0; i < mesh.getNumIndices();) {
@@ -30,17 +35,24 @@ float computeVolume(ofMesh & mesh) {
 	return volume / 6;
 }
 
+ofVec3f min(ofVec3f & a, ofVec3f & b) {
+	return ofVec3f(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z));
+}
+ofVec3f max(ofVec3f & a, ofVec3f & b) {
+	return ofVec3f(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
+}
 //--------------------------------------------------------------
 void ofApp::setup(){
+	ofSetWindowTitle("Nervous System voxelator");
 	openvdb::initialize();
 	gumball.setCamera(cam);
 	ofAddListener(gumball.gumballEvent, this, &ofApp::gumballEvent);
 	resolution = .3;
 	maxTriangle = .4;
 	maxError = .2;
-	maskMode = true;
+	maskMode = false;
 	maskRadius = 10;
-	mask.grid->setGridClass(openvdb::v3_1_0::GridClass::GRID_FOG_VOLUME);
+	mask.grid->setGridClass(openvdb::GridClass::GRID_FOG_VOLUME);
 	isHover = false;
 	setupGui();
 }
@@ -49,19 +61,21 @@ int step = 200;
 string folder = "C:\\Users\\nervous system\\of_v0.8.0_vs_release\\apps\\myApps\\3DVoronoi\\bin\\data\\opt2\\lines\\SLAB_sz9.5_b10_";
 //--------------------------------------------------------------
 void ofApp::update() {
-	if (step < 150) {
-		int frame = (int) (0.5*.86*pow(step,1.5)+1);
-		loadLines(folder + to_string(frame) + ".csv");
-		grid.updateMesh();
-		grid.mesh.save(folder + to_string(step) + ".ply");
-		step++;
-	}
+if (step < 150) {
+	int frame = (int)(0.5*.86*pow(step, 1.5) + 1);
+	loadLines(folder + to_string(frame) + ".csv");
+	grid.updateMesh();
+	grid.mesh.save(folder + to_string(step) + ".ply");
+	step++;
+}
 }
 
 //--------------------------------------------------------------
-void ofApp::draw(){
+void ofApp::draw() {
 	ofBackground(255);
+	
 	guiFunc();
+
 	cam.begin();
 	ofEnableDepthTest();
 	//ofEnableLighting();
@@ -81,6 +95,10 @@ void ofApp::draw(){
 		g->draw();
 	}
 	if (doVolume) volume = computeVolume(grids.front()->mesh);
+
+	if (importing) {
+		loadMesh.draw();
+	}
 	ofDisableDepthTest();
 	ofDisableLighting();
 	gumball.draw();
@@ -97,16 +115,46 @@ void ofApp::draw(){
 
 	cam.end();
 
-	ofDrawBitmapString(volume, ofVec2f(500, 20));
+	gui.end();
 }
 
 void ofApp::guiFunc() {
 	gui.begin();
+	bool doImport = false;
+	importing = false;
 	if (ImGui::BeginMainMenuBar())
 	{
 		if (ImGui::BeginMenu("File"))
 		{
-			//ShowExampleMenuFile();
+			if (ImGui::MenuItem("Open", "CTRL+O")) {
+				auto result = ofSystemLoadDialog();
+				if (result.bSuccess) {
+					//loadFile(result.filePath);
+					filename = result.filePath;
+					string filetype = ofToLower(filename.substr(filename.size() - 3));
+					if (filetype == "ply" || filetype == "stl" || filetype == "obj") {
+						loadMesh.load(filename);
+						if (loadMesh.getNumVertices()>0) {
+							doImport = true;
+							prevCam = cam;
+							ofVec3f bboxMin, bboxMax;
+							auto & verts = loadMesh.getVertices();
+							bboxMin = bboxMax = verts[0];
+							for (int iVert = 1; iVert < verts.size(); ++iVert) {
+								bboxMin = min(bboxMin, verts[iVert]);
+								bboxMax = max(bboxMax, verts[iVert]);
+							}
+							zoom(bboxMin, bboxMax);
+						}
+					}
+				}
+			}
+			if (ImGui::MenuItem("Save", "CTRL+S")) {
+				ofSystemSaveDialog("volume.vdb", "Save VDB file");
+			}
+			if (ImGui::MenuItem("Export", "CTRL+E")) {
+				ofSystemSaveDialog("mesh.obj", "Export mesh");
+			}
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu("Edit"))
@@ -121,8 +169,107 @@ void ofApp::guiFunc() {
 		}
 		ImGui::EndMainMenuBar();
 	}
+	
 
-	gui.end();
+	ImGui::Begin("tools");
+	ImGui::Text("boolean");
+	if (ImGui::Button("union")) {
+		doUnion();
+	}
+	if (ImGui::Button("difference")) {
+		doDifference();
+	}
+	if (ImGui::Button("intersection")) {
+		doIntersection();
+	}
+	ImGui::InputFloat("distance", &offsetAmt);
+	if (ImGui::Button("offset")) {
+		doOffset();
+	}
+
+	if(ImGui::Button("Top")) {
+	}
+	if (ImGui::Button("Left")) {
+	}
+	if (ImGui::Button("Front")) {
+	}
+	if (ImGui::Button("Zoom Selected")) {
+		if (selected.size() > 0) {
+			ofVec3f bboxMin, bboxMax;
+			auto it = selected.begin();
+			auto box = (*it)->bbox();
+			bboxMin = box.first;
+			bboxMax = box.second;
+			it++;
+			while(it != selected.end()){
+				box = (*it)->bbox();
+				bboxMin = min(bboxMin, box.first);
+				bboxMax = max(bboxMax, box.second);
+				it++;
+
+			}
+			zoom(bboxMin, bboxMax);
+		}
+	}
+	if (ImGui::Button("Zoom Extents")) {
+		if (grids.size() > 0) {
+			ofVec3f bboxMin, bboxMax;
+			auto it = grids.begin();
+			auto box = (*it)->bbox();
+			bboxMin = box.first;
+			bboxMax = box.second;
+			it++;
+			while (it != grids.end()) {
+				box = (*it)->bbox();
+				bboxMin = min(bboxMin, box.first);
+				bboxMax = max(bboxMax, box.second);
+				it++;
+
+			}
+			zoom(bboxMin, bboxMax);
+		}
+	}
+
+	ImGui::End();
+	
+	ImGui::Begin("info");
+		ImGui::Text("volume");
+		ImGui::TextColored(ofColor(255, 0, 0), to_string(volume).c_str());
+	ImGui::End();
+	if (doImport) {
+		ImGui::OpenPopup("Import Mesh");
+	}
+	if (ImGui::BeginPopupModal("Import Mesh")) {
+		importing = true;
+		bool autoResolution = false;
+		ImGui::InputFloat("resolution", &resolution);
+
+		ImGui::Checkbox("automatic", &autoResolution);
+		if (ImGui::Button("Load Volume")) {
+			VDB::Ptr newGrid(new VDB(loadMesh, resolution));
+			grids.push_back(newGrid);
+
+			ImGui::CloseCurrentPopup();
+			cam.lookAt(prevCam);
+		}
+		if (ImGui::Button("Close")) {
+			ImGui::CloseCurrentPopup();
+			cam.lookAt(prevCam);
+		}
+		ImGui::EndPopup();
+	}
+}
+
+void ofApp::zoom(ofVec3f bboxMin, ofVec3f bboxMax) {
+	ofVec3f dir = cam.getLookAtDir();
+	ofVec3f up = cam.getUpDir();
+	ofVec3f center = (bboxMin + bboxMax)*0.5;
+	float dist = bboxMin.distance(bboxMax);
+	dir.normalize();
+	cam.setTarget(center);
+	cam.setPosition(center-dir*dist);
+	cam.lookAt(center, up);
+	cam.setNearClip(dist*.1);
 }
 
 bool ofApp::isSelected(VDB::Ptr g) {
@@ -287,45 +434,6 @@ void ofApp::loadVol(string filename) {
 }
 
 void ofApp::setupGui() {
-	/*
-	gui = new ofxDatGui(ofxDatGuiAnchor::TOP_LEFT);
-	gui->addHeader(":: VOXELS ::");
-	ofxDatGuiSlider * resolutionSlider = gui->addSlider("resolution", 0, 2);
-	auto thicknessToggle = gui->addToggle("thickening", doThickening);
-	gui->addSlider("thickness", 0, 5)->bind(surfaceThickness);
-	gui->addBreak();
-	gui->addLabel("BOOLEAN");
-	gui->addButton("union");
-	gui->addButton("intersection");
-	gui->addButton("difference");
-	gui->addBreak();
-	gui->addLabel("modification");
-	ofxDatGuiSlider * offsetSlider = gui->addSlider("offset amt", -10, 10);
-	gui->addButton("offset");
-	gui->addButton("blur");
-	gui->addButton("smooth");
-	gui->addButton("taubin");
-	gui->addBreak();
-	gui->addLabel("saving");
-	ofxDatGuiSlider * triSlider = gui->addSlider("max triangle", 0, 2);
-	ofxDatGuiSlider * errorSlider = gui->addSlider("max error", 0, 2);
-	//ofxDatGuiSlider * targetSlider = gui->addSlider("target volume", 0, 200);
-	gui->addTextInput("filename");
-	gui->addButton("process");
-	gui->addButton("save");
-	gui->addButton("export mesh");
-	gui->addButton("export mesh fast");
-	gui->addButton("clear ops");
-	gui->addFolder("operations");
-
-	resolutionSlider->bind(resolution, 0, 2);
-	triSlider->bind(maxTriangle, 0, 2);
-	errorSlider->bind(maxError, 0, 2);
-	offsetSlider->bind(offsetAmt,-15,15);
-	//targetSlider->bind(targetVolume, 0, 200);
-	
-	gui->onButtonEvent(this, &ofApp::buttonEvent);
-	*/
 }
 
 void ofApp::dragEvent(ofDragInfo info) {
@@ -392,6 +500,53 @@ void ofApp::dragEvent(ofDragInfo info) {
 	}
 }
 
+void ofApp::loadFile(string filename) {
+	string filetype = ofToLower(filename.substr(filename.size() - 3));
+	if (filetype == "ply" || filetype == "stl" || filetype == "obj") {
+		if (doThickening) {
+			ofMesh mesh;
+			mesh.load(filename);
+			if (mesh.getNumIndices() > 3) {
+				VDB::Ptr gr = thickenSrf(mesh, surfaceThickness);
+				if (!gr->grid->empty()) {
+					grids.push_back(gr);
+				}
+			}
+		}
+		else {
+			ofMesh mesh;
+			mesh.load(filename);
+			if (mesh.getNumIndices() > 3) {
+				cout << "vertices " << mesh.getNumVertices() << endl;
+				VDB::Ptr newGrid(new VDB(mesh, resolution));
+				cout << "background " << newGrid->grid->background() << endl;
+				grids.push_back(newGrid);
+			}
+		}
+	}
+	else if (filetype == "csv") {
+		//loadLines(info.files[i]);
+		process(filename);
+		//grid.doDifference(subBox);
+		//grid.updateMesh();
+		//grid.mesh.save(info.files[i].substr(0,info.files[i].size() - 3) + "ply");
+	}
+	else if (filetype == "vdb") {
+		openvdb::io::File file(filename);
+		file.open();
+		openvdb::GridPtrVecPtr ogrids = file.getGrids();
+		for (auto g : *ogrids) {
+
+			VDB::Ptr newGrid(new VDB());
+			newGrid->grid = openvdb::gridPtrCast<openvdb::FloatGrid>(g);
+			if (!newGrid->grid->empty())
+				grids.push_back(newGrid);
+		}
+	}
+	else if (filetype == "vol") {
+		loadVol(filename);
+	}
+}
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
 	if (key == 's') {
@@ -435,15 +590,19 @@ void ofApp::mouseMoved(int x, int y ){
 
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button){
-	isMouseClick = false;
-	if (button == OF_MOUSE_BUTTON_1) {
-		VDB::Ptr g;
-		ofVec3f selPt = selectScreen(x, y, g, &ofApp::nullSelect);
-		if (g != nullptr) {
-			intersectionPt = selPt;
-			isHover = true;
-			mask.rasterSphere(selPt, maskRadius, 1);
-			colorByMask();
+	if (!ImGui::GetIO().WantCaptureMouse) {
+		isMouseClick = false;
+		if (button == OF_MOUSE_BUTTON_1) {
+			/*
+			VDB::Ptr g;
+			ofVec3f selPt = selectScreen(x, y, g, &ofApp::nullSelect);
+			if (g != nullptr) {
+				intersectionPt = selPt;
+				isHover = true;
+				mask.rasterSphere(selPt, maskRadius, 1);
+				colorByMask();
+			}
+			*/
 		}
 	}
 	
@@ -457,7 +616,7 @@ void ofApp::mousePressed(int x, int y, int button){
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button){
 	//if(gui->hitTest(ofPoint(x,y))) return;
-	if (isMouseClick) {
+	if (isMouseClick && !ImGui::GetIO().WantCaptureMouse) {
 		if (button == OF_MOUSE_BUTTON_1) {
 			VDB::Ptr sel = nullptr;
 			if (ofGetKeyPressed(OF_KEY_CONTROL)) {

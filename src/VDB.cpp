@@ -157,7 +157,7 @@ void VDB::smooth() {
 void VDB::taubin() {
 	LevelSetFilter<FloatGrid> filter(*grid);
 	//filter.gaussian();
-	filter.taubin();
+	//filter.taubin();
 	isUpdated = false;
 }
 

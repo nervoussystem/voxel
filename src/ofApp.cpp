@@ -152,7 +152,10 @@ void ofApp::guiFunc() {
 				ofSystemSaveDialog("volume.vdb", "Save VDB file");
 			}
 			if (ImGui::MenuItem("Export", "CTRL+E")) {
-				ofSystemSaveDialog("mesh.obj", "Export mesh");
+				auto result = ofSystemSaveDialog("mesh.obj", "Export mesh");
+				if (result.bSuccess) {
+					saveMeshFast(result.filePath);
+				}
 			}
 			ImGui::EndMenu();
 		}
@@ -187,6 +190,11 @@ void ofApp::guiFunc() {
 
 	ImGui::Text("view");
 	if(ImGui::Button("Top")) {
+		cam.enableOrtho();
+		cam.setPosition(cam.getTarget().getPosition() + ofVec3f(0, 0, cam.getDistance()));
+		cam.lookAt(cam.getTarget(), ofVec3f(0, 1, 0));
+		//cam.
+
 	}
 	if (ImGui::Button("Left")) {
 	}
@@ -249,11 +257,11 @@ void ofApp::guiFunc() {
 			grids.push_back(newGrid);
 
 			ImGui::CloseCurrentPopup();
-			cam.lookAt(prevCam);
+			cam.setTransformMatrix(prevCam.getGlobalTransformMatrix());
 		}
 		if (ImGui::Button("Close")) {
 			ImGui::CloseCurrentPopup();
-			cam.lookAt(prevCam);
+			cam.setTransformMatrix(prevCam.getGlobalTransformMatrix());
 		}
 		ImGui::EndPopup();
 	}
@@ -852,7 +860,7 @@ void ofApp::doDifference() {
 void ofApp::doOffset() {
 	//float offsetAmt = offsetSlider.getParameter().cast<float>().get();
 	for(auto g : selected) {
-		g->offset(offsetAmt, mask);
+		g->offset(-offsetAmt, mask);
 	}
 }
 

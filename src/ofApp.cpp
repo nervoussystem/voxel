@@ -1,6 +1,7 @@
 #include "ofApp.h"
 #include "LevelSetCapsule.h"
 #include "LevelSetWedge.h"
+#include "ObjMesh.h"
 
 float volume;
 float defaultThickness = 0.3f;
@@ -8,7 +9,7 @@ float targetVolume = 31000;// 13928.9;
 float volumeEps = 100;
 
 bool targetingVolume = false;
-bool autosave = false;
+bool autosave = true;
 float surfaceThickness = 1.0;
 bool doThickening = false;
 float radiusScaling = 1.0;
@@ -17,6 +18,7 @@ float minRad;
 ofVboMesh loadMesh;
 ofCamera prevCam;
 bool importing = true;
+bool autoResolution = false;
 string filename;
 
 float computeVolume(ofMesh & mesh) {
@@ -47,9 +49,9 @@ void ofApp::setup(){
 	openvdb::initialize();
 	gumball.setCamera(cam);
 	ofAddListener(gumball.gumballEvent, this, &ofApp::gumballEvent);
-	resolution = .3;
-	maxTriangle = .4;
-	maxError = .2;
+	resolution = .07;
+	maxTriangle = .81;
+	maxError = .02;
 	maskMode = false;
 	maskRadius = 10;
 	mask.grid->setGridClass(openvdb::GridClass::GRID_FOG_VOLUME);
@@ -248,7 +250,7 @@ void ofApp::guiFunc() {
 	}
 	if (ImGui::BeginPopupModal("Import Mesh")) {
 		importing = true;
-		bool autoResolution = false;
+		
 		ImGui::InputFloat("resolution", &resolution);
 
 		ImGui::Checkbox("automatic", &autoResolution);
@@ -299,6 +301,7 @@ void ofApp::loadLines(string filename) {
 	float cthick;
 	VDB::Ptr newGrid(new VDB());
 	int count = 0;
+	/*
 	minRad = 9e9;
 	while (getline(in, cLine)) {
 		stringstream ss(cLine);
@@ -339,8 +342,8 @@ void ofApp::loadLines(string filename) {
 
 	in.clear();
 	in.seekg(0);
-
-	resolution = min(resolution,minRad *1.2f / 3.0f);
+	*/
+	//resolution = min(resolution,minRad *1.2f / 3.0f);
 	cout << minRad << endl;
 	while (getline(in, cLine)) {
 		stringstream ss(cLine);
@@ -933,7 +936,8 @@ void ofApp::process(string filename) {
 		defaultThickness = .3;
 		//while (defaultThickness <= .71) {
 			loadLines(filename);
-			for (int i = 0; i < 5; ++i) grids.back()->smooth();
+			for (int i = 0; i < 3; ++i) grids.back()->smooth();
+			/*
 			grids.back()->updateMesh();
 			volume = computeVolume(grids.back()->mesh);
 			while (targetingVolume && abs(volume - targetVolume) > volumeEps) {
@@ -944,6 +948,7 @@ void ofApp::process(string filename) {
 				grids.back()->updateMesh();
 				volume = computeVolume(grids.back()->mesh);
 			}
+			*/
 			//ofMesh mesh = process(grids.back());
 			//mesh.save(filename.substr(0, filename.size() - 3) + "obj");
 			//grids.erase(grids.end()--);
@@ -954,9 +959,21 @@ void ofApp::process(string filename) {
 				stringstream ss;
 				volume = computeVolume(mesh);
 				ss << filename.substr(0, filename.size() - 4) << "_T" << (int)(minRad * 1000) << "_V" << ((int)(volume * 10)) / 10.0 << ".obj";
+				if (volume < 0) {
+					//flip
+					for (int i = 0; i < mesh.getNumIndices(); i += 3) {
+						unsigned int temp = mesh.getIndex(i + 1);
+						mesh.setIndex(i + 1, mesh.getIndex(i + 2));
+						mesh.setIndex(i + 2, temp);
+					}
+				}
 				mesh.save(ss.str());
-				//grids.erase(grids.end()--);
-				defaultThickness += 0.05;
+				if (grids.size() > 0) {
+					auto gEnd = grids.end();
+					gEnd--;
+					grids.erase(gEnd);
+				}
+				//defaultThickness += 0.05;
 			}
 		//}
 	}

@@ -1,6 +1,7 @@
 #pragma once
 #include "ofVbo.h"
 class ObjMesh {
+public:
 	vector<GLuint> triangleIndices, lineIndices, sphereIndices;
 	vector<float> thickness;
 	vector<ofVec3f> positions;

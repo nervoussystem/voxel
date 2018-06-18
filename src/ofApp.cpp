@@ -134,8 +134,7 @@ void ofApp::guiFunc() {
 	bool doImport = false;
 	importing = false;
 	ImFont * font = ImGui::GetFont();
-	font->Scale = 3;
-	//font->FontSize *= 3;
+	font->Scale = 1;
 	ImGui::PushFont(font);
 	if (ImGui::BeginMainMenuBar())
 	{
@@ -280,6 +279,7 @@ void ofApp::guiFunc() {
 		ImGui::InputFloat("resolution", &resolution);
 
 		ImGui::Checkbox("automatic", &autoResolution);
+		ImGui::InputFloat("default thickness", &surfaceThickness);
 		if (ImGui::Button("Load Volume")) {
 			VDB::Ptr newGrid(new VDB(loadMesh, resolution));
 			grids.push_back(newGrid);

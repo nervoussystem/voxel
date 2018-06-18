@@ -1,6 +1,7 @@
 #include "ofApp.h"
 #include "LevelSetCapsule.h"
 #include "LevelSetWedge.h"
+#include "LevelSetWedgeV.h"
 #include "ObjMesh.h"
 
 float volume;
@@ -20,6 +21,7 @@ ofCamera prevCam;
 bool importing = true;
 bool autoResolution = false;
 string filename;
+ObjMesh loadingMesh;
 
 float computeVolume(ofMesh & mesh) {
 	float volume = 0;
@@ -49,7 +51,7 @@ void ofApp::setup(){
 	openvdb::initialize();
 	gumball.setCamera(cam);
 	ofAddListener(gumball.gumballEvent, this, &ofApp::gumballEvent);
-	resolution = .07;
+	resolution = .3;
 	maxTriangle = .81;
 	maxError = .02;
 	maskMode = false;
@@ -57,19 +59,26 @@ void ofApp::setup(){
 	mask.grid->setGridClass(openvdb::GridClass::GRID_FOG_VOLUME);
 	isHover = false;
 	setupGui();
+	VDB::Ptr gr = thickenSrf();
+	if (!gr->grid->empty()) {
+		grids.push_back(gr);
+	}
+	else {
+		cout << "empty" << endl;
+	}
 }
 
 int step = 200;
 string folder = "C:\\Users\\nervous system\\of_v0.8.0_vs_release\\apps\\myApps\\3DVoronoi\\bin\\data\\opt2\\lines\\SLAB_sz9.5_b10_";
 //--------------------------------------------------------------
 void ofApp::update() {
-if (step < 150) {
-	int frame = (int)(0.5*.86*pow(step, 1.5) + 1);
-	loadLines(folder + to_string(frame) + ".csv");
-	grid.updateMesh();
-	grid.mesh.save(folder + to_string(step) + ".ply");
-	step++;
-}
+	if (step < 150) {
+		int frame = (int)(0.5*.86*pow(step, 1.5) + 1);
+		loadLines(folder + to_string(frame) + ".csv");
+		grid.updateMesh();
+		grid.mesh.save(folder + to_string(step) + ".ply");
+		step++;
+	}
 }
 
 //--------------------------------------------------------------
@@ -124,6 +133,10 @@ void ofApp::guiFunc() {
 	gui.begin();
 	bool doImport = false;
 	importing = false;
+	ImFont * font = ImGui::GetFont();
+	font->Scale = 3;
+	//font->FontSize *= 3;
+	ImGui::PushFont(font);
 	if (ImGui::BeginMainMenuBar())
 	{
 		if (ImGui::BeginMenu("File"))
@@ -133,7 +146,20 @@ void ofApp::guiFunc() {
 				if (result.bSuccess) {
 					filename = result.filePath;
 					string filetype = ofToLower(filename.substr(filename.size() - 3));
-					if (filetype == "ply" || filetype == "stl" || filetype == "obj") {
+					if (filetype == "obj") {
+						loadingMesh.load(filename);
+						doImport = true;
+						prevCam = cam;
+						ofVec3f bboxMin, bboxMax;
+						auto & verts = loadingMesh.positions;
+						bboxMin = bboxMax = verts[0];
+						for (int iVert = 1; iVert < verts.size(); ++iVert) {
+							bboxMin = min(bboxMin, verts[iVert]);
+							bboxMax = max(bboxMax, verts[iVert]);
+						}
+						zoom(bboxMin, bboxMax);
+
+					} else if (filetype == "ply" || filetype == "stl") {
 						loadMesh.load(filename);
 						if (loadMesh.getNumVertices()>0) {
 							doImport = true;
@@ -417,6 +443,24 @@ VDB::Ptr ofApp::thickenSrf(ofMesh & mesh, float thickness) {
 		factory.rasterWedge(resolution, 3);
 
 	}
+	newGrid->floodFill();
+	newGrid->isUpdated = false;
+	newGrid->grid->pruneGrid();
+	newGrid->grid->transform().preScale(resolution);
+	return newGrid;
+}
+
+VDB::Ptr ofApp::thickenSrf() {
+	openvdb::Vec3f v1, v2, v3;
+	VDB::Ptr newGrid(new VDB());
+	v1 = openvdb::Vec3f(0,0,0);
+	v2 = openvdb::Vec3f(0,10,0);
+	v3 = openvdb::Vec3f(10,10,0);
+	openvdb::tools::LevelSetWedgeV<openvdb::FloatGrid> factory(v1, v2, v3, 1.,2.,3.);
+	//openvdb::tools::LevelSetWedge<openvdb::FloatGrid> factory(v1, v2, v3, 2.);
+	factory.mGrid = newGrid->grid;
+	factory.rasterWedge(resolution, 3);
+
 	newGrid->floodFill();
 	newGrid->isUpdated = false;
 	newGrid->grid->pruneGrid();

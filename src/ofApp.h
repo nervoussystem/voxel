@@ -94,6 +94,8 @@ class ofApp : public ofBaseApp{
 		void windowResized(int w, int h);
 		void gotMessage(ofMessage msg);
 
+		VDB::Ptr thickenSrf();
+
 		void resolutionChanged(float & val);
 		void doUnion();
 		void doIntersection();

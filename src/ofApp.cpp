@@ -10,7 +10,7 @@ float targetVolume = 31000;// 13928.9;
 float volumeEps = 100;
 
 bool targetingVolume = false;
-bool autosave = true;
+bool autosave = false;
 float surfaceThickness = 1.0;
 bool doThickening = false;
 float radiusScaling = 1.0;
@@ -181,7 +181,7 @@ void ofApp::guiFunc() {
 			if (ImGui::MenuItem("Export", "CTRL+E")) {
 				auto result = ofSystemSaveDialog("mesh.obj", "Export mesh");
 				if (result.bSuccess) {
-					saveMeshFast(result.filePath);
+					saveMesh(result.filePath);
 				}
 			}
 			ImGui::EndMenu();
@@ -263,6 +263,9 @@ void ofApp::guiFunc() {
 			zoom(bboxMin, bboxMax);
 		}
 	}
+
+	ImGui::InputFloat("max triangle", &maxTriangle);
+	ImGui::InputFloat("max error", &maxError);
 
 	ImGui::End();
 	

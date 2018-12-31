@@ -1,8 +1,10 @@
 #include "ofApp.h"
+#include "openvdb/tools/LevelSetSphere.h"
 #include "LevelSetCapsule.h"
 #include "LevelSetWedge.h"
 #include "LevelSetWedgeV.h"
 #include "ObjMesh.h"
+#include "openvdb/tools/LevelSetUtil.h"
 
 float volume;
 float defaultThickness = 0.3f;
@@ -19,6 +21,7 @@ float minRad;
 ofVboMesh loadMesh;
 ofCamera prevCam;
 bool importing = true;
+bool importingObj = false;
 bool autoResolution = false;
 string filename;
 ObjMesh loadingMesh;
@@ -145,9 +148,11 @@ void ofApp::guiFunc() {
 				if (result.bSuccess) {
 					filename = result.filePath;
 					string filetype = ofToLower(filename.substr(filename.size() - 3));
+					importingObj = false;
 					if (filetype == "obj") {
 						loadingMesh.load(filename);
 						doImport = true;
+						importingObj = true;
 						prevCam = cam;
 						ofVec3f bboxMin, bboxMax;
 						auto & verts = loadingMesh.positions;
@@ -284,11 +289,16 @@ void ofApp::guiFunc() {
 		ImGui::Checkbox("automatic", &autoResolution);
 		ImGui::InputFloat("default thickness", &surfaceThickness);
 		if (ImGui::Button("Load Volume")) {
-			VDB::Ptr newGrid(new VDB(loadMesh, resolution));
-			grids.push_back(newGrid);
-
-			ImGui::CloseCurrentPopup();
+			if (importingObj) {
+				VDB::Ptr newGrid = thickenObj(loadingMesh, surfaceThickness);
+				grids.push_back(newGrid);
+			}
+			else {
+				VDB::Ptr newGrid(new VDB(loadMesh, resolution));
+				grids.push_back(newGrid);
+			}
 			cam.setTransformMatrix(prevCam.getGlobalTransformMatrix());
+			ImGui::CloseCurrentPopup();
 		}
 		if (ImGui::Button("Close")) {
 			ImGui::CloseCurrentPopup();
@@ -463,6 +473,65 @@ VDB::Ptr ofApp::thickenSrf() {
 	//openvdb::tools::LevelSetWedge<openvdb::FloatGrid> factory(v1, v2, v3, 2.);
 	factory.mGrid = newGrid->grid;
 	factory.rasterWedge(resolution, 3);
+
+	newGrid->floodFill();
+	newGrid->isUpdated = false;
+	newGrid->grid->pruneGrid();
+	newGrid->grid->transform().preScale(resolution);
+	return newGrid;
+}
+
+
+VDB::Ptr ofApp::thickenObj(ObjMesh & mesh, float thickness) {
+	openvdb::Vec3f v1, v2, v3;
+	float t1, t2, t3;
+	VDB::Ptr newGrid(new VDB());
+	for (int i = 0; i < mesh.sphereIndices.size(); ++i) {
+		int i1 = mesh.sphereIndices[i];
+		ofVec3f p1 = mesh.positions[i1];
+		float  r1 = mesh.thickness[i1];
+		if (r1 <= 0) r1 = thickness;
+		v1 = openvdb::Vec3f(p1.x, p1.y, p1.z);
+		openvdb::tools::LevelSetSphere<openvdb::FloatGrid> factory(r1,v1);
+		factory.mGrid = newGrid->grid;
+		factory.rasterSphere(resolution, 3);
+	}
+
+	for (int i = 0; i < mesh.lineIndices.size();) {
+		int i1 = mesh.lineIndices[i++];
+		int i2 = mesh.lineIndices[i++];
+		ofVec3f p1 = mesh.positions[i1];
+		float  r1 = mesh.thickness[i1];
+		if (r1 <= 0) r1 = thickness;
+		ofVec3f p2 = mesh.positions[i2];
+		float  r2 = mesh.thickness[i2];
+		if (r2 <= 0) r2 = thickness;
+		v1 = openvdb::Vec3f(p1.x, p1.y, p1.z);
+		v2 = openvdb::Vec3f(p2.x, p2.y, p2.z);
+		openvdb::tools::LevelSetCapsuleV<openvdb::FloatGrid> factory(r1,r2, v1,v2);
+		factory.mGrid = newGrid->grid;
+		factory.rasterCapsule(resolution, 3);
+	}
+	for (int i = 0; i < mesh.triangleIndices.size();) {
+		int i1 = mesh.triangleIndices[i++];
+		int i2 = mesh.triangleIndices[i++];
+		int i3 = mesh.triangleIndices[i++];
+		ofVec3f p1 = mesh.positions[i1];
+		float  r1 = mesh.thickness[i1];
+		if (r1 <= 0) r1 = thickness;
+		ofVec3f p2 = mesh.positions[i2];
+		float  r2 = mesh.thickness[i2];
+		if (r2 <= 0) r2 = thickness;
+		ofVec3f p3 = mesh.positions[i3];
+		float  r3 = mesh.thickness[i3];
+		if (r3 <= 0) r3 = thickness;
+		v1 = openvdb::Vec3f(p1.x, p1.y, p1.z);
+		v2 = openvdb::Vec3f(p2.x, p2.y, p2.z);
+		v3 = openvdb::Vec3f(p3.x, p3.y, p3.z);
+		openvdb::tools::LevelSetWedgeV<openvdb::FloatGrid> factory(v1, v2, v3, r1, r2, r3);
+		factory.mGrid = newGrid->grid;
+		factory.rasterWedge(resolution, 3);
+	}
 
 	newGrid->floodFill();
 	newGrid->isUpdated = false;
@@ -953,7 +1022,7 @@ void ofApp::saveMesh(string filename) {
 		//g->updateMesh();
 		buildMesh(*g, m, maxTriangle, maxError);
 		//ofIndexType baseIndex = m.getNumVertices();
-		//m.addVertices(m.getVertices());
+		//m.addVertices(g->mesh.getVertices());
 		//for (auto i : g->mesh.getIndices()) {
 		//	m.addIndex(i + baseIndex);
 		//}

@@ -5,6 +5,7 @@ public:
 	vector<GLuint> triangleIndices, lineIndices, sphereIndices;
 	vector<float> thickness;
 	vector<ofVec3f> positions;
+	bool hasThickness = false;
 
 	template<class ContainerT>
 	void tokenize(const std::string& str, ContainerT& tokens,

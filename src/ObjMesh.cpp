@@ -37,7 +37,7 @@ void ObjMesh::clear() {
 void ObjMesh::load(string path) {
 	clear();
 	ifstream in(path);
-
+	hasThickness = false;
 	string line;
 	list<string> tokens;
 	while (getline(in, line)) {
@@ -58,6 +58,7 @@ void ObjMesh::load(string path) {
 					if (it != tokens.end()) {
 						float t = stof(*it);
 						thickness.push_back(t);
+						hasThickness = true;
 					}
 					else {
 						thickness.push_back(-1);

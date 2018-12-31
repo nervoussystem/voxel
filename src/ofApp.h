@@ -5,6 +5,7 @@
 #include "VDB.h"
 #include "Meshing.h"
 #include "Gumball.h"
+#include "ObjMesh.h"
 #include "Object.h"
 
 struct MeshOp {
@@ -55,6 +56,7 @@ class ofApp : public ofBaseApp{
 		void loadLines(string filename);
 		void loadVol(string filename);
 		VDB::Ptr thickenSrf(ofMesh & mesh, float thickness);
+		VDB::Ptr thickenObj(ObjMesh & mesh, float thickness);
 		bool isSelected(VDB::Ptr g);
 
 		void zoom(ofVec3f bboxMin, ofVec3f bboxMax);

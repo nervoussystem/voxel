@@ -36,8 +36,8 @@
 /// (the half width is defined by LEVEL_SET_HALF_WIDTH in Types.h),
 /// whereas an SDF can have a variable narrow band width.
 
-#ifndef OPENVDB_TOOLS_LEVELSETSPHERE_HAS_BEEN_INCLUDED
-#define OPENVDB_TOOLS_LEVELSETSPHERE_HAS_BEEN_INCLUDED
+#ifndef OPENVDB_TOOLS_LEVELSETCAPSULE_HAS_BEEN_INCLUDED
+#define OPENVDB_TOOLS_LEVELSETCAPSULE_HAS_BEEN_INCLUDED
 
 #include <openvdb/Grid.h>
 #include <openvdb/Types.h>
@@ -330,8 +330,11 @@ namespace openvdb {
 					if (!(w>1)) OPENVDB_THROW(ValueError, "half-width must be larger than one");
 
 					// Define radius of sphere and narrow-band in voxel units
-					const ValueT r0 = mRadius / dx, rmax = r0 + w;
+					const ValueT r1 = mRadius1 / dx;
+					const ValueT r2 = mRadius2 / dx;
 
+					ValueT rmax = max(r1, r2) + w;
+					ValueT r0 = min(r1, r2);
 					// Radius below the Nyquist frequency
 					if (r0 < 1.5f)  return;
 
@@ -355,7 +358,7 @@ namespace openvdb {
 					// Allocate a ValueAccessor for accelerated random access
 					typename GridT::Accessor accessor = mGrid->getAccessor();
 
-					ValueT pval;
+					ValueT pval, currR, t;
 					const ValueT inside = -mGrid->background();
 
 					if (mInterrupt) mInterrupt->start("Generating level set of capsule");
@@ -375,10 +378,12 @@ namespace openvdb {
 								const float z = k - s[2];
 								float dot = z*dir[2] + xydot;
 								dot = min(max(dot, 0.0f), len);
+								t = dot / len;
 								const Vec3T projPt = dot*dir - Vec3T(x, y, z);
+								currR = t*r2 + (1 - t)*r1;
 								/// Distance in voxel units to capsule
 								//const float v = math::Sqrt(x2y2 + math::Pow2(k - c[2])) - r0,
-								const float v = projPt.length() - r0,
+								const float v = projPt.length() - currR,
 									d = math::Abs(v);
 								if (v > w || (!accessor.probeValue(ijk, pval) && pval < 0)) {
 
